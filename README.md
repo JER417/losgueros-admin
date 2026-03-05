@@ -1,20 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Los Güeros Admin (CRM)
 
-## Getting Started
+## Arrancar el proyecto
 
-First, run the development server:
+Desde la carpeta **losgueros-admin**:
 
 ```bash
+cd losgueros-admin
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000). Si sale "port in use" o "Unable to acquire lock", cierra cualquier otra terminal donde esté corriendo `npm run dev` o borra el lock:
+
+```bash
+rm -f .next/dev/lock
+```
+
+Luego vuelve a ejecutar `npm run dev`.
+
+## Primer usuario
+
+1. En Firebase Console → Authentication → Sign-in method, activa **Email/Password**.
+2. En la pestaña **Users**, crea un usuario (email y contraseña).
+3. En la app entra en `/login` e inicia sesión con ese usuario.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
