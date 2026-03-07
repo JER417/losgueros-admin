@@ -44,14 +44,15 @@ async function ensureUserDocument(user: FirebaseUser) {
   const snapshot = await getDoc(userDocRef);
 
   if (!snapshot.exists()) {
+    const role: Role = "employee";
     await setDoc(userDocRef, {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName ?? "",
-      role: "owner",
+      role,
       createdAt: serverTimestamp(),
     });
-    return "owner" as Role;
+    return role;
   }
 
   const data = snapshot.data() as { role?: Role };
