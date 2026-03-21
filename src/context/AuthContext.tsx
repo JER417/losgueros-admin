@@ -1,3 +1,4 @@
+// src/context/AuthContext.tsx
 "use client";
 
 import {
@@ -50,6 +51,9 @@ async function ensureUserDocument(firebaseUser: FirebaseUser): Promise<Role> {
       role,
       createdAt: serverTimestamp(),
     });
+    // FIX #2: esperar a que Firestore propague el documento antes de
+    // que los listeners de las reglas intenten leerlo (evita permission-denied)
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return role;
   }
 
@@ -57,28 +61,38 @@ async function ensureUserDocument(firebaseUser: FirebaseUser): Promise<Role> {
   return data.role ?? "employee";
 }
 
+function setCookie(token: string) {
+  const isProduction = process.env.NODE_ENV === "production";
+  document.cookie = `authToken=${token}; path=/; max-age=86400; samesite=strict${
+    isProduction ? "; secure" : ""
+  }`;
+}
+
+function clearCookie() {
+  document.cookie = "authToken=; path=/; max-age=0; samesite=strict";
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let refreshInterval: ReturnType<typeof setInterval> | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Limpiar interval anterior si existía
+      if (refreshInterval) clearInterval(refreshInterval);
+
       if (!firebaseUser) {
         setUser(null);
-        // Limpiar cookie
-        document.cookie = "authToken=; path=/; max-age=0; samesite=strict";
+        clearCookie();
         setLoading(false);
         return;
       }
 
       const role = await ensureUserDocument(firebaseUser);
       const token = await firebaseUser.getIdToken();
-
-      // CORREGIDO: secure=true en producción
-      const isProduction = process.env.NODE_ENV === "production";
-      document.cookie = `authToken=${token}; path=/; max-age=86400; samesite=strict${
-        isProduction ? "; secure" : ""
-      }`;
+      setCookie(token);
 
       setUser({
         uid: firebaseUser.uid,
@@ -87,14 +101,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role,
       });
       setLoading(false);
+
+      // FIX #1: refrescar el token JWT cada 50 minutos
+      // (Firebase expira los tokens a los 60min; 50min da margen de seguridad)
+      refreshInterval = setInterval(async () => {
+        try {
+          const freshToken = await firebaseUser.getIdToken(true);
+          setCookie(freshToken);
+        } catch {
+          // Si falla el refresh, forzar logout para evitar estado inconsistente
+          await signOut(auth);
+        }
+      }, 50 * 60 * 1000);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (refreshInterval) clearInterval(refreshInterval);
+    };
   }, []);
 
   const signOutUser = useCallback(async () => {
     await signOut(auth);
-    document.cookie = "authToken=; path=/; max-age=0; samesite=strict";
+    clearCookie();
   }, []);
 
   return (

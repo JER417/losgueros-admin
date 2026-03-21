@@ -1,6 +1,7 @@
+// src/app/dashboard/layout.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -17,6 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, signOutUser } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -33,6 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   async function handleSignOut() {
+    setConfirmLogout(false);
     await signOutUser();
     router.replace("/login");
   }
@@ -41,7 +44,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/clientes", label: "Clientes", icon: Users },
     { href: "/dashboard/pedidos", label: "Pedidos", icon: FileText },
-    // Catálogo solo visible para owner
     ...(user.role === "owner"
       ? [{ href: "/dashboard/productos", label: "Productos", icon: Package }]
       : []),
@@ -54,7 +56,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-slate-100">
       {/* Sidebar */}
       <aside className="flex w-56 flex-col bg-slate-800 text-white">
-        {/* Logo */}
         <div className="border-b border-slate-700 p-4">
           <p className="font-semibold">🥩 Los Güeros</p>
           <p className="text-xs text-slate-400">
@@ -62,7 +63,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </p>
         </div>
 
-        {/* Nav links */}
         <nav className="flex-1 space-y-1 p-2">
           {nav.map(({ href, label, icon: Icon }) => (
             <Link
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href={href}
               className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
                 isActive(href)
-                  ? "bg-[#facc15] text-slate-900 font-medium"
+                  ? "bg-[#facc15] font-medium text-slate-900"
                   : "text-slate-300 hover:bg-slate-700 hover:text-white"
               }`}
             >
@@ -79,7 +79,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
 
-          {/* CTA nuevo pedido */}
           <Link
             href="/dashboard/nuevo-pedido"
             className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
@@ -93,15 +92,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </nav>
 
-        {/* Footer */}
         <div className="border-t border-slate-700 p-3">
-          <p className="text-xs text-slate-400 truncate">{user.email}</p>
+          <p className="truncate text-xs text-slate-400">{user.email}</p>
         </div>
 
-        {/* Sign out */}
+        {/* FIX: botón de logout pide confirmación */}
         <button
           type="button"
-          onClick={handleSignOut}
+          onClick={() => setConfirmLogout(true)}
           className="flex items-center gap-2 px-5 py-3 text-sm text-slate-400 hover:bg-slate-700 hover:text-white"
         >
           <LogOut className="h-4 w-4" />
@@ -109,8 +107,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </button>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-auto p-6">{children}</main>
+
+      {/* Modal confirmar logout */}
+      {confirmLogout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-xs rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 font-semibold text-slate-800">¿Cerrar sesión?</h3>
+            <p className="mb-5 text-sm text-slate-500">
+              Tendrás que volver a iniciar sesión para entrar al panel.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmLogout(false)}
+                className="flex-1 rounded-lg border border-slate-300 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex-1 rounded-lg bg-slate-800 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

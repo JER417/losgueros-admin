@@ -4,15 +4,8 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy,
-  Timestamp,
+  collection, addDoc, updateDoc, deleteDoc,
+  doc, onSnapshot, query, orderBy, Timestamp,
 } from "firebase/firestore";
 import { Plus, X, Pencil, Trash2, AlertCircle, Package } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -20,14 +13,12 @@ import { useRouter } from "next/navigation";
 import type { Producto } from "@/types";
 
 const UNIDADES = ["kg", "pieza", "litro", "vaso", "orden", "docena", "paquete"];
-
 const emptyForm = { nombre: "", precio: "", unidad: "kg" };
 
 export default function ProductosPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // Solo owner puede acceder
   useEffect(() => {
     if (user && user.role !== "owner") router.replace("/dashboard");
   }, [user, router]);
@@ -36,35 +27,56 @@ export default function ProductosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "productos"), orderBy("nombre", "asc"));
-    return onSnapshot(q, (snap) => {
-      setProductos(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Producto[]);
-    });
+    return onSnapshot(
+      q,
+      (snap) => {
+        setProductos(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Producto[]);
+        setLoadingData(false);
+      },
+      (error) => {
+        console.error("Error cargando productos:", error);
+        setLoadingData(false);
+      }
+    );
   }, []);
 
   const openCrear = () => {
     setFormData(emptyForm);
+    setFormError("");
     setEditingId(null);
     setIsModalOpen(true);
   };
 
   const openEditar = (p: Producto) => {
     setFormData({ nombre: p.nombre, precio: String(p.precio), unidad: p.unidad });
+    setFormError("");
     setEditingId(p.id);
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+
+    // FIX: validar precio > 0
+    const precio = parseFloat(formData.precio);
+    if (!precio || precio <= 0) {
+      setFormError("El precio debe ser mayor a $0.");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
         nombre: formData.nombre.trim(),
-        precio: parseFloat(formData.precio) || 0,
+        precio,
         unidad: formData.unidad,
         activo: true,
       };
@@ -72,15 +84,12 @@ export default function ProductosPage() {
       if (editingId) {
         await updateDoc(doc(db, "productos", editingId), payload);
       } else {
-        await addDoc(collection(db, "productos"), {
-          ...payload,
-          createdAt: Timestamp.now(),
-        });
+        await addDoc(collection(db, "productos"), { ...payload, createdAt: Timestamp.now() });
       }
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert("Error al guardar el producto.");
+      setFormError("Error al guardar. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -95,8 +104,7 @@ export default function ProductosPage() {
     setDeleteConfirmId(null);
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:border-[#facc15] focus:outline-none focus:ring-1 focus:ring-[#facc15]";
+  const ic = "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:border-[#facc15] focus:outline-none focus:ring-1 focus:ring-[#facc15]";
 
   if (user?.role !== "owner") return null;
 
@@ -105,33 +113,31 @@ export default function ProductosPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800">Catálogo de Productos</h1>
-          <p className="text-slate-600">Gestiona los productos disponibles para los pedidos</p>
+          <p className="text-slate-600">Productos disponibles para los pedidos</p>
         </div>
-        <button
-          onClick={openCrear}
-          className="flex items-center gap-2 rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400"
-        >
+        <button onClick={openCrear} className="flex items-center gap-2 rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400">
           <Plus className="h-4 w-4" />
           Nuevo Producto
         </button>
       </div>
 
-      {productos.length === 0 ? (
+      {loadingData ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-white border border-slate-200" />
+          ))}
+        </div>
+      ) : productos.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
           <Package className="mx-auto mb-3 h-10 w-10 text-slate-300" />
           <p className="font-medium text-slate-500">No hay productos en el catálogo</p>
-          <p className="mt-1 text-sm text-slate-400">
-            Agrega los productos que ofrece el negocio para agilizar la captura de pedidos.
-          </p>
-          <button
-            onClick={openCrear}
-            className="mt-4 rounded-lg bg-[#facc15] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400"
-          >
+          <p className="mt-1 text-sm text-slate-400">Agrega los productos para agilizar la captura de pedidos.</p>
+          <button onClick={openCrear} className="mt-4 rounded-lg bg-[#facc15] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400">
             Agregar primer producto
           </button>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
@@ -146,36 +152,20 @@ export default function ProductosPage() {
               {productos.map((p) => (
                 <tr key={p.id} className={`hover:bg-slate-50 ${!p.activo ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3 font-medium text-slate-800">{p.nombre}</td>
-                  <td className="px-4 py-3 text-slate-600 capitalize">{p.unidad}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                    ${p.precio.toLocaleString("es-MX")}
-                  </td>
+                  <td className="px-4 py-3 capitalize text-slate-600">{p.unidad}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-800">${p.precio.toLocaleString("es-MX")}</td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => handleToggleActivo(p)}
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        p.activo
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                      }`}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${p.activo ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                     >
                       {p.activo ? "Activo" : "Inactivo"}
                     </button>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() => openEditar(p)}
-                        className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(p.id)}
-                        className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <button onClick={() => openEditar(p)} className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setDeleteConfirmId(p.id)} className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </td>
                 </tr>
@@ -190,68 +180,42 @@ export default function ProductosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-lg font-semibold text-slate-800">
-                {editingId ? "Editar Producto" : "Nuevo Producto"}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded p-1 text-slate-400 hover:bg-slate-100">
-                <X className="h-5 w-5" />
-              </button>
+              <h2 className="text-lg font-semibold text-slate-800">{editingId ? "Editar Producto" : "Nuevo Producto"}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Nombre *</label>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData((f) => ({ ...f, nombre: e.target.value }))}
-                  required
-                  placeholder="Ej: Kg Barbacoa"
-                  className={inputClass}
-                />
+                <input type="text" value={formData.nombre} onChange={(e) => setFormData((f) => ({ ...f, nombre: e.target.value }))} required placeholder="Ej: Kg Barbacoa" className={ic} />
               </div>
-
-              <div className="grid gap-4 grid-cols-2">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Precio ($) *</label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.50"
+                    type="number" min="0.50" step="0.50"
                     value={formData.precio}
-                    onChange={(e) => setFormData((f) => ({ ...f, precio: e.target.value }))}
-                    required
-                    placeholder="0.00"
-                    className={inputClass}
+                    onChange={(e) => { setFormData((f) => ({ ...f, precio: e.target.value })); setFormError(""); }}
+                    required placeholder="0.00" className={ic}
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Unidad *</label>
-                  <select
-                    value={formData.unidad}
-                    onChange={(e) => setFormData((f) => ({ ...f, unidad: e.target.value }))}
-                    className={inputClass}
-                  >
-                    {UNIDADES.map((u) => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
+                  <select value={formData.unidad} onChange={(e) => setFormData((f) => ({ ...f, unidad: e.target.value }))} className={ic}>
+                    {UNIDADES.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
 
+              {formError && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {formError}
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-50"
-                >
+                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={loading} className="rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-50">
                   {loading ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Producto"}
                 </button>
               </div>
@@ -274,12 +238,8 @@ export default function ProductosPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 rounded-lg border border-slate-300 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                Cancelar
-              </button>
-              <button onClick={() => handleDelete(deleteConfirmId)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-medium text-white hover:bg-red-600">
-                Sí, eliminar
-              </button>
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 rounded-lg border border-slate-300 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button onClick={() => handleDelete(deleteConfirmId)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-medium text-white hover:bg-red-600">Sí, eliminar</button>
             </div>
           </div>
         </div>
