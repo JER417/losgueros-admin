@@ -2,14 +2,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// This file expects the following env vars to be defined:
-// NEXT_PUBLIC_FIREBASE_API_KEY
-// NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-// NEXT_PUBLIC_FIREBASE_PROJECT_ID
-// NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-// NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-// NEXT_PUBLIC_FIREBASE_APP_ID
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -22,19 +14,13 @@ const firebaseConfig = {
 function createFirebaseApp() {
   if (!firebaseConfig.apiKey) {
     throw new Error(
-      "Firebase config is missing. Make sure env vars NEXT_PUBLIC_FIREBASE_* are set."
+      "Firebase config incompleto. Verifica que las variables NEXT_PUBLIC_FIREBASE_* estén definidas en .env.local"
     );
   }
-
-  if (!getApps().length) {
-    return initializeApp(firebaseConfig);
-  }
-
-  return getApp();
+  return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 
 const app = createFirebaseApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-
