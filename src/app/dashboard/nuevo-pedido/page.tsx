@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
+import { printOrderTicket } from "@/lib/printer/print-order";
 import {
   collection,
   addDoc,
@@ -104,6 +105,8 @@ export default function NuevoPedidoPage() {
 
   const [items, setItems] = useState<PedidoItem[]>([newItem()]);
   const [loading, setLoading] = useState(false);
+  const [savedOrderForPrint, setSavedOrderForPrint] = useState<any>(null);
+  const [printing, setPrinting] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -376,7 +379,22 @@ export default function NuevoPedidoPage() {
 
       await addDoc(collection(db, "pedidos"), pedidoData);
 
-      router.push("/dashboard/pedidos");
+      setSavedOrderForPrint({
+        clienteNombre: pedidoData.clienteNombre,
+        clienteTelefono: pedidoData.clienteTelefono,
+        direccionEntrega:
+          tipoPedido === "envio" && selectedCliente?.direccion
+            ? selectedCliente.direccion
+            : undefined,
+        createdAt: new Date(),
+        tipoPedido: pedidoData.tipoPedido,
+        metodoPago: pedidoData.metodoPago,
+        notas: pedidoData.notas,
+        items: pedidoData.items,
+        totalGeneral: pedidoData.totalGeneral,
+      });
+
+      //router.push("/dashboard/pedidos");
     } catch (error) {
       console.error(error);
       alert("Error al guardar el pedido");
@@ -384,6 +402,20 @@ export default function NuevoPedidoPage() {
       setLoading(false);
     }
   };
+
+  async function handlePrintTicket() {
+  if (!savedOrderForPrint) return;
+
+  try {
+    setPrinting(true);
+    await printOrderTicket(savedOrderForPrint);
+  } catch (error) {
+    console.error("Error al imprimir:", error);
+    alert("No se pudo imprimir el ticket");
+  } finally {
+    setPrinting(false);
+  }
+}
 
   const dir = selectedCliente?.direccion;
   const hasAddress = !!dir?.calle;
@@ -783,7 +815,6 @@ export default function NuevoPedidoPage() {
             </div>
           </div>
         </div>
-
         <div className="flex justify-end gap-3">
           <Link
             href="/dashboard/pedidos"
@@ -791,6 +822,17 @@ export default function NuevoPedidoPage() {
           >
             Cancelar
           </Link>
+
+          {savedOrderForPrint && (
+            <button
+              type="button"
+              onClick={handlePrintTicket}
+              disabled={printing}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-900 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {printing ? "Imprimiendo..." : "Imprimir ticket"}
+            </button>
+          )}
 
           <button
             type="submit"
