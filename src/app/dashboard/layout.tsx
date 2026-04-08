@@ -137,3 +137,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </div>
   );
 }
+// El layout del dashboard se encarga de mostrar la barra lateral con la navegación y el botón de logout, además de proteger las rutas para que solo usuarios autenticados puedan acceder.
