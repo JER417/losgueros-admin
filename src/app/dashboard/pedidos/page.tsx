@@ -1,21 +1,21 @@
 // src/app/dashboard/pedidos/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import {
   collection, onSnapshot, query, orderBy,
   doc, updateDoc, Timestamp, limit,
 } from "firebase/firestore";
-import { Plus, Phone, Calendar, FileText, Receipt, AlertCircle, ChevronDown } from "lucide-react";
+import { Plus, Phone, Calendar, FileText, Receipt, AlertCircle, ChevronDown, Search, X } from "lucide-react";
 import TicketModal, { PedidoConDireccion } from "@/components/TicketModal";
 
 const STATUS_OPTIONS = [
   { value: "pendiente",  label: "Pendiente",  bg: "#fefce8", text: "#a16207",  border: "#fde68a" },
   { value: "en camino",  label: "En camino",  bg: "#eff6ff", text: "#1d4ed8",  border: "#bfdbfe" },
   { value: "completado", label: "Completado", bg: "#f0fdf4", text: "#15803d",  border: "#bbf7d0" },
-  { value: "cancelado",  label: "Cancelado",  bg: "#eff6ff", text: "#1d4ed8",  border: "#bfdbfe" },
+  { value: "cancelado",  label: "Cancelado",  bg: "#fef2f2", text: "#991b1b",  border: "#fecaca" },
 ];
 
 const TIPO_LABELS: Record<string, string> = {
@@ -40,12 +40,29 @@ function Skeleton() {
   );
 }
 
+/** Resalta el término buscado dentro de un texto */
+function Highlight({ text, term }: { text: string; term: string }) {
+  if (!term || !text) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(term.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: "#dbeafe", color: "#1d4ed8", borderRadius: 3, padding: "0 2px" }}>
+        {text.slice(idx, idx + term.length)}
+      </mark>
+      {text.slice(idx + term.length)}
+    </>
+  );
+}
+
 export default function PedidosPage() {
-  const [pedidos,       setPedidos]      = useState<PedidoConDireccion[]>([]);
-  const [ticketPedido,  setTicketPedido] = useState<PedidoConDireccion | null>(null);
-  const [filterStatus,  setFilterStatus] = useState<string>("todos");
-  const [loadingData,   setLoadingData]  = useState(true);
-  const [networkError,  setNetworkError] = useState("");
+  const [pedidos,      setPedidos]      = useState<PedidoConDireccion[]>([]);
+  const [ticketPedido, setTicketPedido] = useState<PedidoConDireccion | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("todos");
+  const [searchQuery,  setSearchQuery]  = useState("");
+  const [loadingData,  setLoadingData]  = useState(true);
+  const [networkError, setNetworkError] = useState("");
 
   useEffect(() => {
     const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"), limit(100));
@@ -62,18 +79,44 @@ export default function PedidosPage() {
   const getStatusCfg = (status: string) =>
     STATUS_OPTIONS.find(s => s.value === status) ?? { bg: "#f3f4f6", text: "#6b7280", border: "#e5e7eb", label: status };
 
-  const filtered = filterStatus === "todos" ? pedidos : pedidos.filter(p => p.status === filterStatus);
+  /* ── Filtrado combinado: status + búsqueda ── */
+  const filtered = useMemo(() => {
+    let list = filterStatus === "todos" ? pedidos : pedidos.filter(p => p.status === filterStatus);
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return list;
+
+    return list.filter(p => {
+      const nombre   = (p.clienteNombre    ?? "").toLowerCase();
+      const telefono = (p.clienteTelefono  ?? "").replace(/\s/g, "");
+      const orderId  = ((p as any).orderNumber ?? p.id ?? "").toLowerCase();
+      const qClean   = q.replace(/\s/g, "");
+
+      return (
+        nombre.includes(q)          ||
+        telefono.includes(qClean)   ||
+        orderId.includes(q)
+      );
+    });
+  }, [pedidos, filterStatus, searchQuery]);
+
+  const hasSearch = searchQuery.trim().length > 0;
 
   return (
     <div style={{ maxWidth: 840, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
             Pedidos
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: 14, color: "#9ca3af" }}>
-            {loadingData ? "Cargando..." : `${pedidos.length} pedido${pedidos.length !== 1 ? "s" : ""} recientes`}
+            {loadingData
+              ? "Cargando..."
+              : hasSearch
+                ? `${filtered.length} resultado${filtered.length !== 1 ? "s" : ""} para "${searchQuery}"`
+                : `${pedidos.length} pedido${pedidos.length !== 1 ? "s" : ""} recientes`
+            }
           </p>
         </div>
         <Link
@@ -90,18 +133,54 @@ export default function PedidosPage() {
       </div>
 
       {networkError && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 9, marginBottom: 18, fontSize: 13, color: "#1d4ed8" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 9, marginBottom: 16, fontSize: 13, color: "#1d4ed8" }}>
           <AlertCircle size={14} /> {networkError}
         </div>
       )}
+
+      {/* ── Buscador ── */}
+      <div style={{ position: "relative", marginBottom: 16 }}>
+        <Search size={15} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar por nombre, celular o número de pedido…"
+          className="field"
+          style={{ paddingLeft: 38, paddingRight: searchQuery ? 36 : 14 }}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            style={{
+              position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+              border: "none", background: "none", cursor: "pointer",
+              color: "#9ca3af", display: "flex", padding: 2, borderRadius: 4,
+            }}
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
 
       {/* Status filter tabs */}
       {!loadingData && (
         <div style={{ display: "flex", gap: 6, marginBottom: 20, overflowX: "auto", paddingBottom: 2 }}>
           {["todos", ...STATUS_OPTIONS.map(s => s.value)].map(status => {
             const active = filterStatus === status;
-            const cfg = STATUS_OPTIONS.find(s => s.value === status);
-            const count = status === "todos" ? pedidos.length : pedidos.filter(p => p.status === status).length;
+            const cfg    = STATUS_OPTIONS.find(s => s.value === status);
+            // count respects active search
+            const base   = hasSearch ? filtered : pedidos;
+            const count  = status === "todos"
+              ? (hasSearch ? filtered.length : pedidos.length)
+              : pedidos.filter(p => p.status === status && (
+                  !hasSearch || (
+                    (p.clienteNombre ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                    (p.clienteTelefono ?? "").replace(/\s/g, "").includes(searchQuery.trim().replace(/\s/g, "")) ||
+                    ((p as any).orderNumber ?? p.id ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase())
+                  )
+                )).length;
+
             return (
               <button
                 key={status}
@@ -128,7 +207,10 @@ export default function PedidosPage() {
         {loadingData
           ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} />)
           : filtered.map(pedido => {
-              const cfg = getStatusCfg(pedido.status);
+              const cfg        = getStatusCfg(pedido.status);
+              const orderNum   = (pedido as any).orderNumber ?? "";
+              const searchTerm = searchQuery.trim();
+
               return (
                 <div
                   key={pedido.id}
@@ -142,8 +224,14 @@ export default function PedidosPage() {
                     {/* Left */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
+                        {/* Número de pedido */}
+                        {orderNum && (
+                          <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "2px 7px", borderRadius: 5 }}>
+                            <Highlight text={orderNum} term={searchTerm} />
+                          </span>
+                        )}
                         <span style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>
-                          {pedido.clienteNombre || "—"}
+                          <Highlight text={pedido.clienteNombre || "—"} term={searchTerm} />
                         </span>
                         {/* Status select */}
                         <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
@@ -178,7 +266,7 @@ export default function PedidosPage() {
                         {pedido.clienteTelefono && (
                           <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                             <Phone size={11} style={{ color: "#2563eb" }} />
-                            {pedido.clienteTelefono}
+                            <Highlight text={pedido.clienteTelefono} term={searchTerm} />
                           </span>
                         )}
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -227,25 +315,28 @@ export default function PedidosPage() {
         }
 
         {!loadingData && filtered.length === 0 && (
-          <div
-            style={{
-              background: "#fff", border: "1.5px dashed #e5e7eb",
-              borderRadius: 14, padding: "48px 24px",
-              textAlign: "center",
-            }}
-          >
-            <FileText size={28} style={{ color: "#d1d5db", margin: "0 auto 12px" }} />
-            <p style={{ color: "#9ca3af", fontSize: 14, margin: "0 0 6px", fontWeight: 500 }}>
-              No hay pedidos{filterStatus !== "todos" ? " con este filtro" : ""}.
+          <div style={{ background: "#fff", border: "1.5px dashed #e5e7eb", borderRadius: 14, padding: "48px 24px", textAlign: "center" }}>
+            <Search size={28} style={{ color: "#d1d5db", margin: "0 auto 12px" }} />
+            <p style={{ color: "#9ca3af", fontSize: 14, margin: "0 0 8px", fontWeight: 500 }}>
+              {hasSearch
+                ? `Sin resultados para "${searchQuery}"`
+                : `No hay pedidos${filterStatus !== "todos" ? " con este filtro" : ""}.`
+              }
             </p>
-            {filterStatus !== "todos" && (
-              <button
-                onClick={() => setFilterStatus("todos")}
-                style={{ color: "#2563eb", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}
-              >
-                Ver todos
-              </button>
-            )}
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              {hasSearch && (
+                <button onClick={() => setSearchQuery("")}
+                  style={{ color: "#2563eb", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                  Limpiar búsqueda
+                </button>
+              )}
+              {filterStatus !== "todos" && (
+                <button onClick={() => setFilterStatus("todos")}
+                  style={{ color: "#2563eb", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                  Ver todos los estados
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
