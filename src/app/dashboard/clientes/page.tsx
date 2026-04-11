@@ -4,365 +4,371 @@
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy,
-  where,
-  getDocs,
-  Timestamp,
+  collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy, where, getDocs, Timestamp,
 } from "firebase/firestore";
-import { Plus, X, Phone, MapPin, Search, Pencil, Trash2, AlertCircle } from "lucide-react";
+import {
+  Plus, X, Phone, MapPin, Search, Pencil,
+  Trash2, AlertCircle, User, ChevronDown,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface Direccion {
-  calle: string;
-  noExt: string;
-  noInt: string;
-  colonia: string;
-  ciudad: string;
-  estado: string;
-  cp: string;
-  referencias: string;
+  calle: string; noExt: string; noInt: string; colonia: string;
+  ciudad: string; estado: string; cp: string; referencias: string;
 }
-
 interface Cliente {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  telefono: string;
-  correo: string;
-  direccion: Direccion;
-  createdAt: Timestamp;
+  id: string; nombre: string; apellidos: string; telefono: string;
+  correo: string; direccion: Direccion; createdAt: Timestamp;
 }
 
 const emptyForm = {
   nombre: "", apellidos: "", telefono: "", correo: "",
-  calle: "", noExt: "", noInt: "", colonia: "", ciudad: "",
-  estado: "", cp: "", referencias: "",
+  calle: "", noExt: "", noInt: "", colonia: "",
+  ciudad: "", estado: "", cp: "", referencias: "",
 };
 
 type ModalMode = "crear" | "editar";
 
-// Skeleton card
-function ClienteCardSkeleton() {
+/* ── helpers ───────────────────────────────────── */
+const initials = (n: string, a: string) => `${n?.[0] ?? ""}${a?.[0] ?? ""}`.toUpperCase();
+
+/* ── Label / Input wrappers ────────────────────── */
+function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
-      <div className="mt-3 space-y-2">
-        <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
-        <div className="h-3 w-40 animate-pulse rounded bg-slate-200" />
-      </div>
+    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      {children}
+    </label>
+  );
+}
+
+/* ── Card skeleton ──────────────────────────────── */
+function CardSkeleton() {
+  return (
+    <div style={{ background: "#fff", border: "1.5px solid #f3f4f6", borderRadius: 14, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+      <div style={{ height: 14, width: "60%", background: "#f3f4f6", borderRadius: 4, marginBottom: 12 }} />
+      <div style={{ height: 12, width: "40%", background: "#f3f4f6", borderRadius: 4, marginBottom: 8 }} />
+      <div style={{ height: 12, width: "70%", background: "#f3f4f6", borderRadius: 4 }} />
     </div>
   );
 }
 
+/* ── main ───────────────────────────────────────── */
 export default function ClientesPage() {
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const isOwner  = user?.role === "owner";
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [networkError, setNetworkError] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<ModalMode>("crear");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState(emptyForm);
-  const [formError, setFormError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [clientes,       setClientes]       = useState<Cliente[]>([]);
+  const [loading,        setLoading]        = useState(false);
+  const [loadingData,    setLoadingData]    = useState(true);
+  const [networkError,   setNetworkError]   = useState("");
+  const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [modalMode,      setModalMode]      = useState<ModalMode>("crear");
+  const [editingId,      setEditingId]      = useState<string | null>(null);
+  const [formData,       setFormData]       = useState(emptyForm);
+  const [formError,      setFormError]      = useState("");
+  const [searchTerm,     setSearchTerm]     = useState("");
+  const [deleteConfirmId,setDeleteConfirmId]= useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "clientes"), orderBy("createdAt", "desc"));
-    return onSnapshot(
-      q,
-      (snap) => {
-        setClientes(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Cliente[]);
-        setLoadingData(false);
-      },
-      (error) => {
-        console.error("Error cargando clientes:", error);
-        setNetworkError("Error de conexión. Verifica tu red.");
-        setLoadingData(false);
-      }
+    return onSnapshot(q,
+      snap => { setClientes(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Cliente[]); setLoadingData(false); },
+      err  => { console.error(err); setNetworkError("Error de conexión."); setLoadingData(false); }
     );
   }, []);
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase().replace(/\s/g, "");
     if (!term) return clientes;
-    return clientes.filter(
-      (c) =>
-        `${c.nombre} ${c.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.telefono.replace(/\s/g, "").includes(term) ||
-        c.direccion?.colonia?.toLowerCase().includes(searchTerm.toLowerCase())
+    return clientes.filter(c =>
+      `${c.nombre} ${c.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.telefono.replace(/\s/g, "").includes(term) ||
+      c.direccion?.colonia?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [clientes, searchTerm]);
 
-  const openCrear = () => {
-    setFormData(emptyForm);
-    setFormError("");
-    setEditingId(null);
-    setModalMode("crear");
-    setIsModalOpen(true);
-  };
-
+  const openCrear = () => { setFormData(emptyForm); setFormError(""); setEditingId(null); setModalMode("crear"); setIsModalOpen(true); };
   const openEditar = (c: Cliente) => {
     setFormData({
-      nombre: c.nombre, apellidos: c.apellidos,
-      telefono: c.telefono, correo: c.correo ?? "",
-      calle: c.direccion?.calle ?? "", noExt: c.direccion?.noExt ?? "",
-      noInt: c.direccion?.noInt ?? "", colonia: c.direccion?.colonia ?? "",
-      ciudad: c.direccion?.ciudad ?? "", estado: c.direccion?.estado ?? "",
-      cp: c.direccion?.cp ?? "", referencias: c.direccion?.referencias ?? "",
+      nombre: c.nombre, apellidos: c.apellidos, telefono: c.telefono, correo: c.correo ?? "",
+      calle: c.direccion?.calle ?? "", noExt: c.direccion?.noExt ?? "", noInt: c.direccion?.noInt ?? "",
+      colonia: c.direccion?.colonia ?? "", ciudad: c.direccion?.ciudad ?? "",
+      estado: c.direccion?.estado ?? "", cp: c.direccion?.cp ?? "", referencias: c.direccion?.referencias ?? "",
     });
-    setFormError("");
-    setEditingId(c.id);
-    setModalMode("editar");
-    setIsModalOpen(true);
+    setFormError(""); setEditingId(c.id); setModalMode("editar"); setIsModalOpen(true);
   };
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
     setFormError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setFormError("");
-
+    setLoading(true); setFormError("");
     try {
-      const editingCliente = editingId ? clientes.find((c) => c.id === editingId) : null;
-      const phoneChanged = !editingCliente || editingCliente.telefono !== formData.telefono;
-
-      if (phoneChanged) {
-        const q = query(collection(db, "clientes"), where("telefono", "==", formData.telefono));
-        const existing = await getDocs(q);
-        const conflict = existing.docs.find((d) => d.id !== editingId);
-        if (conflict) {
-          setFormError("Ya existe un cliente con ese número de teléfono.");
-          return;
+      const editingCliente = editingId ? clientes.find(c => c.id === editingId) : null;
+      if (!editingCliente || editingCliente.telefono !== formData.telefono) {
+        const existing = await getDocs(query(collection(db, "clientes"), where("telefono", "==", formData.telefono)));
+        if (existing.docs.some(d => d.id !== editingId)) {
+          setFormError("Ya existe un cliente con ese número de teléfono."); return;
         }
       }
-
       const payload = {
-        nombre: formData.nombre.trim(),
-        apellidos: formData.apellidos.trim(),
-        telefono: formData.telefono.trim(),
-        correo: formData.correo.trim(),
+        nombre: formData.nombre.trim(), apellidos: formData.apellidos.trim(),
+        telefono: formData.telefono.trim(), correo: formData.correo.trim(),
         direccion: {
-          calle: formData.calle.trim(), noExt: formData.noExt.trim(),
-          noInt: formData.noInt.trim(), colonia: formData.colonia.trim(),
-          ciudad: formData.ciudad.trim(), estado: formData.estado.trim(),
-          cp: formData.cp.trim(), referencias: formData.referencias.trim(),
+          calle: formData.calle.trim(), noExt: formData.noExt.trim(), noInt: formData.noInt.trim(),
+          colonia: formData.colonia.trim(), ciudad: formData.ciudad.trim(),
+          estado: formData.estado.trim(), cp: formData.cp.trim(), referencias: formData.referencias.trim(),
         },
       };
-
       if (modalMode === "crear") {
         await addDoc(collection(db, "clientes"), { ...payload, createdAt: Timestamp.now() });
       } else if (editingId) {
         await updateDoc(doc(db, "clientes", editingId), payload);
       }
-
       setIsModalOpen(false);
     } catch (err) {
-      console.error(err);
-      setFormError("Ocurrió un error. Inténtalo de nuevo.");
+      console.error(err); setFormError("Ocurrió un error. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "clientes", id));
-      setDeleteConfirmId(null);
-    } catch (err) {
-      console.error(err);
-      alert("Error al eliminar el cliente.");
-    }
+    try { await deleteDoc(doc(db, "clientes", id)); setDeleteConfirmId(null); }
+    catch { alert("Error al eliminar el cliente."); }
   };
 
-  const ic = "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:border-[#facc15] focus:outline-none focus:ring-1 focus:ring-[#facc15]";
-  const lc = "mb-1 block text-sm font-medium text-slate-700";
+  /* ── styles ── */
+  const card: React.CSSProperties = {
+    background: "#fff", border: "1.5px solid #f3f4f6",
+    borderRadius: 14, padding: "18px 20px",
+    boxShadow: "0 1px 4px rgba(0,0,0,.04)",
+  };
+  const sectionTitle: React.CSSProperties = {
+    margin: "0 0 10px", fontSize: 11, fontWeight: 700,
+    color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em",
+  };
 
   return (
-    <div>
-      {networkError && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          ⚠️ {networkError}
-        </div>
-      )}
-
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Clientes</h1>
-          <p className="text-slate-600">{clientes.length} clientes registrados</p>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
+            Clientes
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "#9ca3af" }}>
+            {clientes.length} cliente{clientes.length !== 1 ? "s" : ""} registrado{clientes.length !== 1 ? "s" : ""}
+          </p>
         </div>
         <button
           onClick={openCrear}
-          className="flex items-center gap-2 rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400"
+          style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "9px 18px", background: "#2563eb",
+            border: "none", borderRadius: 9, color: "#fff",
+            fontSize: 13, fontWeight: 700, cursor: "pointer",
+            fontFamily: "var(--font-sans)",
+          }}
         >
-          <Plus className="h-4 w-4" />
-          Nuevo Cliente
+          <Plus size={14} /> Nuevo Cliente
         </button>
       </div>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      {networkError && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 9, marginBottom: 18, fontSize: 13, color: "#1d4ed8" }}>
+          <AlertCircle size={14} /> {networkError}
+        </div>
+      )}
+
+      {/* Search */}
+      <div style={{ position: "relative", marginBottom: 20, maxWidth: 400 }}>
+        <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
         <input
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
           placeholder="Buscar por nombre, teléfono o colonia..."
-          className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-slate-800 placeholder:text-slate-400 focus:border-[#facc15] focus:outline-none focus:ring-1 focus:ring-[#facc15]"
+          className="field"
+          style={{ paddingLeft: 36 }}
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 14 }}>
         {loadingData
-          ? Array.from({ length: 6 }).map((_, i) => <ClienteCardSkeleton key={i} />)
-          : filtered.map((cliente) => (
-            <div key={cliente.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-semibold text-slate-800">
-                  {cliente.nombre} {cliente.apellidos}
-                </h3>
-                {isOwner && (
-                  <div className="flex shrink-0 gap-1">
-                    <button onClick={() => openEditar(cliente)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => setDeleteConfirmId(cliente.id)} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500" title="Eliminar">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+          ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
+          : filtered.map(c => (
+              <div key={c.id} style={card}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 38, height: 38, borderRadius: "50%",
+                        background: "#eff6ff", color: "#2563eb",
+                        fontSize: 13, fontWeight: 800,
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}
+                    >
+                      {initials(c.nombre, c.apellidos)}
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>
+                        {c.nombre} {c.apellidos}
+                      </p>
+                    </div>
                   </div>
-                )}
+                  {isOwner && (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        onClick={() => openEditar(c)}
+                        style={{ padding: 6, border: "none", background: "transparent", cursor: "pointer", color: "#9ca3af", borderRadius: 6, display: "flex" }}
+                        title="Editar"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(c.id)}
+                        style={{ padding: 6, border: "none", background: "transparent", cursor: "pointer", color: "#9ca3af", borderRadius: 6, display: "flex" }}
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#6b7280" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <Phone size={13} style={{ flexShrink: 0, color: "#2563eb" }} />
+                    {c.telefono}
+                  </div>
+                  {c.direccion?.calle ? (
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
+                      <MapPin size={13} style={{ flexShrink: 0, marginTop: 2, color: "#2563eb" }} />
+                      <span style={{ lineHeight: 1.4 }}>
+                        {c.direccion.calle} {c.direccion.noExt}
+                        {c.direccion.noInt ? ` Int. ${c.direccion.noInt}` : ""}, Col. {c.direccion.colonia}
+                        {c.direccion.referencias && (
+                          <span style={{ display: "block", fontSize: 11, color: "#9ca3af", fontStyle: "italic", marginTop: 2 }}>
+                            Ref: {c.direccion.referencias}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <MapPin size={13} style={{ flexShrink: 0, color: "#facc15" }} />
+                      <span style={{ color: "#ca8a04", fontSize: 12, fontWeight: 500 }}>Sin dirección registrada</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="mt-2 space-y-1 text-sm text-slate-600">
-                <p className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  {cliente.telefono}
-                </p>
-                {cliente.direccion?.calle ? (
-                  <p className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>
-                      {cliente.direccion.calle} {cliente.direccion.noExt}
-                      {cliente.direccion.noInt ? ` Int. ${cliente.direccion.noInt}` : ""},
-                      Col. {cliente.direccion.colonia}
-                      {cliente.direccion.referencias && (
-                        <span className="block text-xs italic text-slate-400">
-                          Ref: {cliente.direccion.referencias}
-                        </span>
-                      )}
-                    </span>
-                  </p>
-                ) : (
-                  <p className="flex items-center gap-2 text-amber-600">
-                    <MapPin className="h-4 w-4 shrink-0" />
-                    Sin dirección registrada
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-
-        {!loadingData && filtered.length === 0 && (
-          <p className="col-span-full py-8 text-center text-slate-500">
-            {searchTerm ? "No se encontraron clientes con ese criterio." : "No hay clientes registrados."}
-          </p>
-        )}
+            ))
+        }
       </div>
 
-      {/* Modal crear / editar */}
+      {!loadingData && filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "64px 0" }}>
+          <User size={32} style={{ color: "#d1d5db", margin: "0 auto 12px" }} />
+          <p style={{ color: "#9ca3af", fontSize: 14, margin: 0 }}>
+            {searchTerm ? "No se encontraron clientes." : "No hay clientes registrados."}
+          </p>
+        </div>
+      )}
+
+      {/* ── Modal crear / editar ─────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
-            <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
-              <h2 className="text-xl font-semibold text-slate-800">
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 660, maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 56px rgba(0,0,0,.2)" }}>
+            {/* Modal header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1.5px solid #f3f4f6" }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#111827" }}>
                 {modalMode === "crear" ? "Nuevo Cliente" : "Editar Cliente"}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded p-1 text-slate-400 hover:bg-slate-100">
-                <X className="h-5 w-5" />
+              <button onClick={() => setIsModalOpen(false)} style={{ padding: 6, border: "none", background: "transparent", cursor: "pointer", color: "#9ca3af", borderRadius: 6, display: "flex" }}>
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="mb-4 grid gap-4 md:grid-cols-2">
-                <div><label className={lc}>Nombre *</label><input name="nombre" type="text" value={formData.nombre} onChange={handleInput} required placeholder="Nombre" className={ic} /></div>
-                <div><label className={lc}>Apellidos *</label><input name="apellidos" type="text" value={formData.apellidos} onChange={handleInput} required placeholder="Apellidos" className={ic} /></div>
-              </div>
+            {/* Modal body */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              <form onSubmit={handleSubmit} style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* Nombre / Apellidos */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div><Label>Nombre *</Label><input name="nombre" type="text" value={formData.nombre} onChange={handleInput} required placeholder="Nombre" className="field" /></div>
+                  <div><Label>Apellidos *</Label><input name="apellidos" type="text" value={formData.apellidos} onChange={handleInput} required placeholder="Apellidos" className="field" /></div>
+                </div>
 
-              <div className="mb-4 grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className={lc}>Teléfono * (10 dígitos)</label>
-                  <input name="telefono" type="tel" value={formData.telefono} onChange={handleInput} required maxLength={10} pattern="\d{10}" placeholder="5512345678" className={ic} />
+                {/* Teléfono / Correo */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <Label>Teléfono * (10 dígitos)</Label>
+                    <input name="telefono" type="tel" value={formData.telefono} onChange={handleInput} required maxLength={10} pattern="\d{10}" placeholder="5512345678" className="field" />
+                  </div>
+                  <div><Label>Correo</Label><input name="correo" type="email" value={formData.correo} onChange={handleInput} placeholder="correo@ejemplo.com" className="field" /></div>
                 </div>
-                <div><label className={lc}>Correo</label><input name="correo" type="email" value={formData.correo} onChange={handleInput} placeholder="correo@ejemplo.com" className={ic} /></div>
-              </div>
 
-              <div className="mb-4 rounded-lg bg-slate-50 p-4">
-                <h3 className="mb-3 font-medium text-slate-700">Dirección de entrega</h3>
-                <div className="mb-3 grid gap-3 md:grid-cols-3">
-                  <div className="md:col-span-1"><label className={lc}>Calle</label><input name="calle" type="text" value={formData.calle} onChange={handleInput} placeholder="Calle" className={ic} /></div>
-                  <div><label className={lc}>No. Ext</label><input name="noExt" type="text" value={formData.noExt} onChange={handleInput} placeholder="#" className={ic} /></div>
-                  <div><label className={lc}>No. Int</label><input name="noInt" type="text" value={formData.noInt} onChange={handleInput} placeholder="Opcional" className={ic} /></div>
+                {/* Dirección section */}
+                <div style={{ background: "#f9fafb", border: "1.5px solid #f3f4f6", borderRadius: 12, padding: 18 }}>
+                  <p style={sectionTitle}>Dirección de entrega</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
+                      <div><Label>Calle</Label><input name="calle" type="text" value={formData.calle} onChange={handleInput} placeholder="Calle" className="field" /></div>
+                      <div><Label>No. Ext</Label><input name="noExt" type="text" value={formData.noExt} onChange={handleInput} placeholder="#" className="field" /></div>
+                      <div><Label>No. Int</Label><input name="noInt" type="text" value={formData.noInt} onChange={handleInput} placeholder="Opcional" className="field" /></div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div><Label>Colonia</Label><input name="colonia" type="text" value={formData.colonia} onChange={handleInput} placeholder="Colonia" className="field" /></div>
+                      <div><Label>Ciudad</Label><input name="ciudad" type="text" value={formData.ciudad} onChange={handleInput} placeholder="Ciudad" className="field" /></div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div><Label>Estado</Label><input name="estado" type="text" value={formData.estado} onChange={handleInput} placeholder="Estado" className="field" /></div>
+                      <div><Label>CP</Label><input name="cp" type="text" value={formData.cp} onChange={handleInput} maxLength={5} placeholder="00000" className="field" /></div>
+                    </div>
+                    <div><Label>Referencias</Label><input name="referencias" type="text" value={formData.referencias} onChange={handleInput} placeholder="Ej: Frente al parque, portón azul" className="field" /></div>
+                  </div>
                 </div>
-                <div className="mb-3 grid gap-3 md:grid-cols-2">
-                  <div><label className={lc}>Colonia</label><input name="colonia" type="text" value={formData.colonia} onChange={handleInput} placeholder="Colonia" className={ic} /></div>
-                  <div><label className={lc}>Ciudad</label><input name="ciudad" type="text" value={formData.ciudad} onChange={handleInput} placeholder="Ciudad" className={ic} /></div>
-                </div>
-                <div className="mb-3 grid gap-3 md:grid-cols-2">
-                  <div><label className={lc}>Estado</label><input name="estado" type="text" value={formData.estado} onChange={handleInput} placeholder="Estado" className={ic} /></div>
-                  <div><label className={lc}>CP</label><input name="cp" type="text" value={formData.cp} onChange={handleInput} maxLength={5} placeholder="00000" className={ic} /></div>
-                </div>
-                <div><label className={lc}>Referencias</label><input name="referencias" type="text" value={formData.referencias} onChange={handleInput} placeholder="Ej: Frente al parque, portón azul" className={ic} /></div>
-              </div>
 
-              {formError && (
-                <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {formError}
-                </div>
-              )}
+                {formError && (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: 13, color: "#1d4ed8" }}>
+                    <AlertCircle size={14} /> {formError}
+                  </div>
+                )}
 
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={loading} className="rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-50">
-                  {loading ? "Guardando..." : modalMode === "crear" ? "Crear Cliente" : "Guardar Cambios"}
-                </button>
-              </div>
-            </form>
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 4 }}>
+                  <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: "9px 20px", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={loading} style={{ padding: "9px 20px", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading ? .7 : 1 }}>
+                    {loading ? "Guardando..." : modalMode === "crear" ? "Crear Cliente" : "Guardar Cambios"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal confirmar eliminar */}
+      {/* ── Confirm delete modal ─────────────────────── */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                <AlertCircle className="h-5 w-5 text-red-500" />
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 24px 48px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertCircle size={18} style={{ color: "#2563eb" }} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-800">Eliminar cliente</h3>
-                <p className="text-sm text-slate-500">Esta acción no se puede deshacer.</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#111827" }}>Eliminar cliente</p>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>Esta acción no se puede deshacer. Sus pedidos anteriores se conservarán.</p>
               </div>
             </div>
-            <p className="mb-5 text-sm text-slate-600">
-              ¿Estás seguro? Sus pedidos anteriores se conservarán.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 rounded-lg border border-slate-300 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancelar</button>
-              <button onClick={() => handleDelete(deleteConfirmId)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-medium text-white hover:bg-red-600">Sí, eliminar</button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: "9px 0", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>Cancelar</button>
+              <button onClick={() => handleDelete(deleteConfirmId)} style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}>Sí, eliminar</button>
             </div>
           </div>
         </div>
