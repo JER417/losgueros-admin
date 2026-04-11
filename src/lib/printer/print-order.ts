@@ -12,7 +12,7 @@ function strToHex(text: string): string {
 const INIT = "1B40";
 const CENTER = "1B6101";
 const CUT = "1B64011D564100";
-const ESP32_URL = "http://192.168.0.151/print";
+const ESP32_URL = "http://192.168.100.103/print";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
