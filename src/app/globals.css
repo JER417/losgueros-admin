@@ -1,10 +1,85 @@
+/* src/app/globals.css */
 @import "tailwindcss";
 
-/* ── Print: solo mostrar el ticket al imprimir ── */
+/* â”€â”€ Google Fonts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap");
+
+/* â”€â”€ Root tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+:root {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "DM Mono", "Courier New", monospace;
+
+  --red:        #dc2626;
+  --red-dark:   #b91c1c;
+  --red-deeper: #7f1d1d;
+  --red-light:  #fef2f2;
+  --red-mid:    #fee2e2;
+
+  --yellow:       #facc15;
+  --yellow-dark:  #ca8a04;
+  --yellow-light: #fefce8;
+  --yellow-mid:   #fef08a;
+
+  --gray-50:  #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+}
+
+/* â”€â”€ Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--gray-50);
+  color: var(--gray-900);
+  margin: 0;
+}
+
+/* â”€â”€ Scrollbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--gray-300); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+/* â”€â”€ Focus ring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* â”€â”€ Shared input style â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--gray-900);
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none;
+}
+.field::placeholder { color: var(--gray-400); }
+.field:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(220,38,38,.12);
+}
+
+/* â”€â”€ Print â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media print {
-  body > * {
-    display: none !important;
-  }
+  body > * { display: none !important; }
   #ticket-print-root {
     display: block !important;
     position: fixed;

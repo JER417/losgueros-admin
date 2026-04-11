@@ -7,7 +7,10 @@ import {
   collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, Timestamp,
 } from "firebase/firestore";
-import { Plus, X, Pencil, Trash2, AlertCircle, Package } from "lucide-react";
+import {
+  Plus, X, Pencil, Trash2, AlertCircle,
+  Package, ToggleLeft, ToggleRight,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Producto } from "@/types";
@@ -15,87 +18,66 @@ import type { Producto } from "@/types";
 const UNIDADES = ["kg", "pieza", "litro", "vaso", "orden", "docena", "paquete"];
 const emptyForm = { nombre: "", precio: "", unidad: "kg" };
 
+const fmtMoney = (n: number) =>
+  n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      {children}{required && <span style={{ color: "#dc2626" }}> *</span>}
+    </label>
+  );
+}
+
 export default function ProductosPage() {
   const { user } = useAuth();
-  const router = useRouter();
+  const router   = useRouter();
 
   useEffect(() => {
     if (user && user.role !== "owner") router.replace("/dashboard");
   }, [user, router]);
 
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState(emptyForm);
-  const [formError, setFormError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [productos,        setProductos]       = useState<Producto[]>([]);
+  const [isModalOpen,      setIsModalOpen]     = useState(false);
+  const [editingId,        setEditingId]       = useState<string | null>(null);
+  const [formData,         setFormData]        = useState(emptyForm);
+  const [formError,        setFormError]       = useState("");
+  const [loading,          setLoading]         = useState(false);
+  const [loadingData,      setLoadingData]     = useState(true);
+  const [deleteConfirmId,  setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "productos"), orderBy("nombre", "asc"));
-    return onSnapshot(
-      q,
-      (snap) => {
-        setProductos(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Producto[]);
-        setLoadingData(false);
-      },
-      (error) => {
-        console.error("Error cargando productos:", error);
-        setLoadingData(false);
-      }
+    return onSnapshot(q,
+      snap => { setProductos(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Producto[]); setLoadingData(false); },
+      err  => { console.error(err); setLoadingData(false); }
     );
   }, []);
 
-  const openCrear = () => {
-    setFormData(emptyForm);
-    setFormError("");
-    setEditingId(null);
-    setIsModalOpen(true);
-  };
-
+  const openCrear = () => { setFormData(emptyForm); setFormError(""); setEditingId(null); setIsModalOpen(true); };
   const openEditar = (p: Producto) => {
     setFormData({ nombre: p.nombre, precio: String(p.precio), unidad: p.unidad });
-    setFormError("");
-    setEditingId(p.id);
-    setIsModalOpen(true);
+    setFormError(""); setEditingId(p.id); setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-
-    // FIX: validar precio > 0
+    e.preventDefault(); setFormError("");
     const precio = parseFloat(formData.precio);
-    if (!precio || precio <= 0) {
-      setFormError("El precio debe ser mayor a $0.");
-      return;
-    }
-
+    if (!precio || precio <= 0) { setFormError("El precio debe ser mayor a $0."); return; }
     setLoading(true);
     try {
-      const payload = {
-        nombre: formData.nombre.trim(),
-        precio,
-        unidad: formData.unidad,
-        activo: true,
-      };
-
+      const payload = { nombre: formData.nombre.trim(), precio, unidad: formData.unidad, activo: true };
       if (editingId) {
         await updateDoc(doc(db, "productos", editingId), payload);
       } else {
         await addDoc(collection(db, "productos"), { ...payload, createdAt: Timestamp.now() });
       }
       setIsModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      setFormError("Error al guardar. Inténtalo de nuevo.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); setFormError("Error al guardar. Inténtalo de nuevo."); }
+    finally { setLoading(false); }
   };
 
-  const handleToggleActivo = async (p: Producto) => {
+  const handleToggle = async (p: Producto) => {
     await updateDoc(doc(db, "productos", p.id), { activo: !p.activo });
   };
 
@@ -104,118 +86,215 @@ export default function ProductosPage() {
     setDeleteConfirmId(null);
   };
 
-  const ic = "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:border-[#facc15] focus:outline-none focus:ring-1 focus:ring-[#facc15]";
-
   if (user?.role !== "owner") return null;
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div style={{ maxWidth: 840, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Catálogo de Productos</h1>
-          <p className="text-slate-600">Productos disponibles para los pedidos</p>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
+            Catálogo de Productos
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "#9ca3af" }}>
+            Productos disponibles al crear pedidos
+          </p>
         </div>
-        <button onClick={openCrear} className="flex items-center gap-2 rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400">
-          <Plus className="h-4 w-4" />
-          Nuevo Producto
+        <button
+          onClick={openCrear}
+          style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "9px 18px", background: "#dc2626",
+            border: "none", borderRadius: 9, color: "#fff",
+            fontSize: 13, fontWeight: 700, cursor: "pointer",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
+          <Plus size={14} /> Nuevo Producto
         </button>
       </div>
 
-      {loadingData ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-white border border-slate-200" />
-          ))}
-        </div>
-      ) : productos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
-          <Package className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-          <p className="font-medium text-slate-500">No hay productos en el catálogo</p>
-          <p className="mt-1 text-sm text-slate-400">Agrega los productos para agilizar la captura de pedidos.</p>
-          <button onClick={openCrear} className="mt-4 rounded-lg bg-[#facc15] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400">
+      {/* Empty state */}
+      {!loadingData && productos.length === 0 && (
+        <div
+          style={{
+            background: "#fff", border: "1.5px dashed #e5e7eb",
+            borderRadius: 16, padding: "64px 24px", textAlign: "center",
+          }}
+        >
+          <Package size={36} style={{ color: "#d1d5db", margin: "0 auto 14px" }} />
+          <p style={{ fontWeight: 700, color: "#6b7280", margin: "0 0 6px", fontSize: 15 }}>
+            No hay productos en el catálogo
+          </p>
+          <p style={{ color: "#9ca3af", fontSize: 13, margin: "0 0 20px" }}>
+            Agrega los productos para agilizar la captura de pedidos.
+          </p>
+          <button
+            onClick={openCrear}
+            style={{
+              padding: "9px 20px", background: "#dc2626", border: "none",
+              borderRadius: 9, color: "#fff", fontSize: 13, fontWeight: 700,
+              cursor: "pointer", fontFamily: "var(--font-sans)",
+            }}
+          >
             Agregar primer producto
           </button>
         </div>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Producto</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Unidad</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600">Precio</th>
-                <th className="px-4 py-3 text-center font-medium text-slate-600">Estado</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {productos.map((p) => (
-                <tr key={p.id} className={`hover:bg-slate-50 ${!p.activo ? "opacity-50" : ""}`}>
-                  <td className="px-4 py-3 font-medium text-slate-800">{p.nombre}</td>
-                  <td className="px-4 py-3 capitalize text-slate-600">{p.unidad}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-800">${p.precio.toLocaleString("es-MX")}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleToggleActivo(p)}
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${p.activo ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                    >
-                      {p.activo ? "Activo" : "Inactivo"}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => openEditar(p)} className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => setDeleteConfirmId(p.id)} className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      )}
+
+      {/* Skeleton */}
+      {loadingData && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} style={{ height: 52, background: "#fff", border: "1.5px solid #f3f4f6", borderRadius: 12, animation: "pulse 1.5s infinite" }} />
+          ))}
+          <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
         </div>
       )}
 
-      {/* Modal crear / editar */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-lg font-semibold text-slate-800">{editingId ? "Editar Producto" : "Nuevo Producto"}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-4 p-6">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Nombre *</label>
-                <input type="text" value={formData.nombre} onChange={(e) => setFormData((f) => ({ ...f, nombre: e.target.value }))} required placeholder="Ej: Kg Barbacoa" className={ic} />
+      {/* Table */}
+      {!loadingData && productos.length > 0 && (
+        <div style={{ background: "#fff", border: "1.5px solid #f3f4f6", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+          {/* Table header */}
+          <div
+            style={{
+              display: "grid", gridTemplateColumns: "1fr 100px 110px 90px 100px",
+              padding: "10px 20px", background: "#fafafa",
+              borderBottom: "1.5px solid #f3f4f6",
+            }}
+          >
+            {["Producto", "Unidad", "Precio", "Estado", "Acciones"].map((h, i) => (
+              <span
+                key={h}
+                style={{
+                  fontSize: 10, fontWeight: 700, color: "#9ca3af",
+                  textTransform: "uppercase", letterSpacing: "0.07em",
+                  textAlign: i >= 2 ? "center" : "left",
+                }}
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+
+          {/* Rows */}
+          {productos.map((p, idx) => (
+            <div
+              key={p.id}
+              style={{
+                display: "grid", gridTemplateColumns: "1fr 100px 110px 90px 100px",
+                padding: "13px 20px", alignItems: "center",
+                borderBottom: idx < productos.length - 1 ? "1px solid #f9fafb" : "none",
+                opacity: p.activo ? 1 : 0.45,
+                background: p.activo ? "#fff" : "#fafafa",
+                transition: "background .15s",
+              }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{p.nombre}</span>
+              <span style={{ fontSize: 13, color: "#6b7280", textTransform: "capitalize" }}>{p.unidad}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", textAlign: "center" }}>
+                {fmtMoney(p.precio)}
+              </span>
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <button
+                  onClick={() => handleToggle(p)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "4px 10px", border: "none",
+                    borderRadius: 20, cursor: "pointer",
+                    fontSize: 11, fontWeight: 700,
+                    background: p.activo ? "#f0fdf4" : "#f3f4f6",
+                    color: p.activo ? "#16a34a" : "#9ca3af",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                >
+                  {p.activo
+                    ? <ToggleRight size={14} style={{ color: "#16a34a" }} />
+                    : <ToggleLeft  size={14} />
+                  }
+                  {p.activo ? "Activo" : "Inactivo"}
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display: "flex", justifyContent: "center", gap: 4 }}>
+                <button
+                  onClick={() => openEditar(p)}
+                  style={{ padding: 7, border: "none", background: "transparent", cursor: "pointer", color: "#9ca3af", borderRadius: 7, display: "flex" }}
+                  title="Editar"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => setDeleteConfirmId(p.id)}
+                  style={{ padding: 7, border: "none", background: "transparent", cursor: "pointer", color: "#9ca3af", borderRadius: 7, display: "flex" }}
+                  title="Eliminar"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Modal crear / editar ─────────────────────── */}
+      {isModalOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 440, boxShadow: "0 24px 56px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1.5px solid #f3f4f6" }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#111827" }}>
+                {editingId ? "Editar Producto" : "Nuevo Producto"}
+              </h2>
+              <button onClick={() => setIsModalOpen(false)} style={{ padding: 6, border: "none", background: "transparent", cursor: "pointer", color: "#9ca3af", borderRadius: 6, display: "flex" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <Label required>Nombre</Label>
+                <input
+                  type="text" value={formData.nombre}
+                  onChange={e => setFormData(f => ({ ...f, nombre: e.target.value }))}
+                  required placeholder="Ej: Kg Barbacoa"
+                  className="field" autoFocus
+                />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Precio ($) *</label>
+                  <Label required>Precio ($)</Label>
                   <input
                     type="number" min="0.50" step="0.50"
                     value={formData.precio}
-                    onChange={(e) => { setFormData((f) => ({ ...f, precio: e.target.value })); setFormError(""); }}
-                    required placeholder="0.00" className={ic}
+                    onChange={e => { setFormData(f => ({ ...f, precio: e.target.value })); setFormError(""); }}
+                    required placeholder="0.00"
+                    className="field"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Unidad *</label>
-                  <select value={formData.unidad} onChange={(e) => setFormData((f) => ({ ...f, unidad: e.target.value }))} className={ic}>
-                    {UNIDADES.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
+                  <Label required>Unidad</Label>
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={formData.unidad}
+                      onChange={e => setFormData(f => ({ ...f, unidad: e.target.value }))}
+                      className="field" style={{ paddingRight: 28 }}
+                    >
+                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                    <X size={0} />
+                  </div>
                 </div>
               </div>
 
               {formError && (
-                <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {formError}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, color: "#b91c1c" }}>
+                  <AlertCircle size={14} /> {formError}
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={loading} className="rounded-lg bg-[#facc15] px-4 py-2 font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-50">
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 4 }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={loading} style={{ padding: "9px 20px", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading ? .7 : 1 }}>
                   {loading ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Producto"}
                 </button>
               </div>
@@ -224,22 +303,26 @@ export default function ProductosPage() {
         </div>
       )}
 
-      {/* Modal confirmar eliminar */}
+      {/* ── Confirm delete ───────────────────────────── */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                <AlertCircle className="h-5 w-5 text-red-500" />
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 24px 48px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertCircle size={18} style={{ color: "#dc2626" }} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-800">Eliminar producto</h3>
-                <p className="text-sm text-slate-500">Esta acción no se puede deshacer.</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#111827" }}>Eliminar producto</p>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>Esta acción no se puede deshacer.</p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 rounded-lg border border-slate-300 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancelar</button>
-              <button onClick={() => handleDelete(deleteConfirmId)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-medium text-white hover:bg-red-600">Sí, eliminar</button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: "9px 0", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                Cancelar
+              </button>
+              <button onClick={() => handleDelete(deleteConfirmId)} style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                Sí, eliminar
+              </button>
             </div>
           </div>
         </div>
