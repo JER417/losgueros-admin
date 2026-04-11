@@ -24,7 +24,7 @@ const fmtMoney = (n: number) =>
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-      {children}{required && <span style={{ color: "#dc2626" }}> *</span>}
+      {children}{required && <span style={{ color: "#2563eb" }}> *</span>}
     </label>
   );
 }
@@ -104,7 +104,7 @@ export default function ProductosPage() {
           onClick={openCrear}
           style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "9px 18px", background: "#dc2626",
+            padding: "9px 18px", background: "#2563eb",
             border: "none", borderRadius: 9, color: "#fff",
             fontSize: 13, fontWeight: 700, cursor: "pointer",
             fontFamily: "var(--font-sans)",
@@ -132,7 +132,7 @@ export default function ProductosPage() {
           <button
             onClick={openCrear}
             style={{
-              padding: "9px 20px", background: "#dc2626", border: "none",
+              padding: "9px 20px", background: "#2563eb", border: "none",
               borderRadius: 9, color: "#fff", fontSize: 13, fontWeight: 700,
               cursor: "pointer", fontFamily: "var(--font-sans)",
             }}
@@ -285,7 +285,7 @@ export default function ProductosPage() {
               </div>
 
               {formError && (
-                <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, color: "#b91c1c" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: 13, color: "#1d4ed8" }}>
                   <AlertCircle size={14} /> {formError}
                 </div>
               )}
@@ -294,7 +294,7 @@ export default function ProductosPage() {
                 <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                   Cancelar
                 </button>
-                <button type="submit" disabled={loading} style={{ padding: "9px 20px", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading ? .7 : 1 }}>
+                <button type="submit" disabled={loading} style={{ padding: "9px 20px", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading ? .7 : 1 }}>
                   {loading ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Producto"}
                 </button>
               </div>
@@ -308,8 +308,8 @@ export default function ProductosPage() {
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 24px 48px rgba(0,0,0,.2)" }}>
             <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <AlertCircle size={18} style={{ color: "#dc2626" }} />
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertCircle size={18} style={{ color: "#2563eb" }} />
               </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#111827" }}>Eliminar producto</p>
@@ -320,7 +320,7 @@ export default function ProductosPage() {
               <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: "9px 0", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                 Cancelar
               </button>
-              <button onClick={() => handleDelete(deleteConfirmId)} style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+              <button onClick={() => handleDelete(deleteConfirmId)} style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                 Sí, eliminar
               </button>
             </div>

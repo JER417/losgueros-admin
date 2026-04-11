@@ -38,7 +38,7 @@ function StatCard({
   icon: React.ElementType; color: "red" | "yellow" | "blue" | "green";
 }) {
   const cfg = {
-    red:    { bg: "#fef2f2", iconBg: "#dc2626", text: "#b91c1c" },
+    red:    { bg: "#eff6ff", iconBg: "#2563eb", text: "#1d4ed8" },
     yellow: { bg: "#fefce8", iconBg: "#ca8a04", text: "#a16207" },
     blue:   { bg: "#eff6ff", iconBg: "#2563eb", text: "#1d4ed8" },
     green:  { bg: "#f0fdf4", iconBg: "#16a34a", text: "#15803d" },
@@ -168,7 +168,7 @@ export default function DashboardPage() {
           href="/dashboard/nuevo-pedido"
           style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "9px 18px", background: "#dc2626",
+            padding: "9px 18px", background: "#2563eb",
             border: "none", borderRadius: 9, color: "#fff",
             fontSize: 13, fontWeight: 700, cursor: "pointer",
             textDecoration: "none", transition: "background .15s",
@@ -184,8 +184,8 @@ export default function DashboardPage() {
           style={{
             display: "flex", gap: 8, alignItems: "center",
             padding: "11px 16px", marginBottom: 20,
-            background: "#fef2f2", border: "1px solid #fecaca",
-            borderRadius: 10, fontSize: 13, color: "#b91c1c", fontWeight: 500,
+            background: "#eff6ff", border: "1px solid #bfdbfe",
+            borderRadius: 10, fontSize: 13, color: "#1d4ed8", fontWeight: 500,
           }}
         >
           <AlertCircle size={15} /> {networkError}
@@ -244,7 +244,7 @@ export default function DashboardPage() {
                   <div
                     style={{
                       width: 36, height: 36, borderRadius: "50%",
-                      background: "#fef2f2", color: "#dc2626",
+                      background: "#eff6ff", color: "#2563eb",
                       fontSize: 12, fontWeight: 800,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,
@@ -265,7 +265,7 @@ export default function DashboardPage() {
                     display: "flex", alignItems: "center", gap: 5,
                     padding: "6px 12px", background: "#facc15",
                     borderRadius: 7, fontSize: 12, fontWeight: 700,
-                    color: "#7f1d1d", textDecoration: "none",
+                    color: "#1e3a8a", textDecoration: "none",
                   }}
                 >
                   Nuevo Pedido <ArrowRight size={11} />
@@ -278,7 +278,7 @@ export default function DashboardPage() {
         {searchPhone.replace(/\s/g, "").length >= 3 && searchResults.length === 0 && !loadingClientes && (
           <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
             No se encontró ningún cliente.{" "}
-            <Link href="/dashboard/clientes" style={{ color: "#dc2626", fontWeight: 600, textDecoration: "none" }}>
+            <Link href="/dashboard/clientes" style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>
               Registrar cliente nuevo
             </Link>
           </div>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
             href="/dashboard/clientes"
             style={{
               display: "flex", alignItems: "center", gap: 4,
-              fontSize: 12, color: "#dc2626", fontWeight: 600,
+              fontSize: 12, color: "#2563eb", fontWeight: 600,
               textDecoration: "none",
             }}
           >
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                   <div
                     style={{
                       width: 36, height: 36, borderRadius: "50%",
-                      background: "#fef2f2", color: "#dc2626",
+                      background: "#eff6ff", color: "#2563eb",
                       fontSize: 12, fontWeight: 800,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,

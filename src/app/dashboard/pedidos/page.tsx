@@ -15,7 +15,7 @@ const STATUS_OPTIONS = [
   { value: "pendiente",  label: "Pendiente",  bg: "#fefce8", text: "#a16207",  border: "#fde68a" },
   { value: "en camino",  label: "En camino",  bg: "#eff6ff", text: "#1d4ed8",  border: "#bfdbfe" },
   { value: "completado", label: "Completado", bg: "#f0fdf4", text: "#15803d",  border: "#bbf7d0" },
-  { value: "cancelado",  label: "Cancelado",  bg: "#fef2f2", text: "#b91c1c",  border: "#fecaca" },
+  { value: "cancelado",  label: "Cancelado",  bg: "#eff6ff", text: "#1d4ed8",  border: "#bfdbfe" },
 ];
 
 const TIPO_LABELS: Record<string, string> = {
@@ -80,7 +80,7 @@ export default function PedidosPage() {
           href="/dashboard/nuevo-pedido"
           style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "9px 18px", background: "#dc2626",
+            padding: "9px 18px", background: "#2563eb",
             borderRadius: 9, color: "#fff", fontSize: 13,
             fontWeight: 700, textDecoration: "none",
           }}
@@ -90,7 +90,7 @@ export default function PedidosPage() {
       </div>
 
       {networkError && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 9, marginBottom: 18, fontSize: 13, color: "#b91c1c" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 9, marginBottom: 18, fontSize: 13, color: "#1d4ed8" }}>
           <AlertCircle size={14} /> {networkError}
         </div>
       )}
@@ -177,12 +177,12 @@ export default function PedidosPage() {
                       <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#6b7280", flexWrap: "wrap" }}>
                         {pedido.clienteTelefono && (
                           <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                            <Phone size={11} style={{ color: "#dc2626" }} />
+                            <Phone size={11} style={{ color: "#2563eb" }} />
                             {pedido.clienteTelefono}
                           </span>
                         )}
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                          <Calendar size={11} style={{ color: "#dc2626" }} />
+                          <Calendar size={11} style={{ color: "#2563eb" }} />
                           {fmtDate((pedido as any).fecha)}
                         </span>
                       </div>
@@ -241,7 +241,7 @@ export default function PedidosPage() {
             {filterStatus !== "todos" && (
               <button
                 onClick={() => setFilterStatus("todos")}
-                style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                style={{ color: "#2563eb", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}
               >
                 Ver todos
               </button>

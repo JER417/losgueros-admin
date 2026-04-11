@@ -169,7 +169,7 @@ export default function ClientesPage() {
           onClick={openCrear}
           style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "9px 18px", background: "#dc2626",
+            padding: "9px 18px", background: "#2563eb",
             border: "none", borderRadius: 9, color: "#fff",
             fontSize: 13, fontWeight: 700, cursor: "pointer",
             fontFamily: "var(--font-sans)",
@@ -180,7 +180,7 @@ export default function ClientesPage() {
       </div>
 
       {networkError && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 9, marginBottom: 18, fontSize: 13, color: "#b91c1c" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 9, marginBottom: 18, fontSize: 13, color: "#1d4ed8" }}>
           <AlertCircle size={14} /> {networkError}
         </div>
       )}
@@ -209,7 +209,7 @@ export default function ClientesPage() {
                     <div
                       style={{
                         width: 38, height: 38, borderRadius: "50%",
-                        background: "#fef2f2", color: "#dc2626",
+                        background: "#eff6ff", color: "#2563eb",
                         fontSize: 13, fontWeight: 800,
                         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                       }}
@@ -243,12 +243,12 @@ export default function ClientesPage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "#6b7280" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <Phone size={13} style={{ flexShrink: 0, color: "#dc2626" }} />
+                    <Phone size={13} style={{ flexShrink: 0, color: "#2563eb" }} />
                     {c.telefono}
                   </div>
                   {c.direccion?.calle ? (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-                      <MapPin size={13} style={{ flexShrink: 0, marginTop: 2, color: "#dc2626" }} />
+                      <MapPin size={13} style={{ flexShrink: 0, marginTop: 2, color: "#2563eb" }} />
                       <span style={{ lineHeight: 1.4 }}>
                         {c.direccion.calle} {c.direccion.noExt}
                         {c.direccion.noInt ? ` Int. ${c.direccion.noInt}` : ""}, Col. {c.direccion.colonia}
@@ -334,7 +334,7 @@ export default function ClientesPage() {
                 </div>
 
                 {formError && (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, color: "#b91c1c" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: 13, color: "#1d4ed8" }}>
                     <AlertCircle size={14} /> {formError}
                   </div>
                 )}
@@ -343,7 +343,7 @@ export default function ClientesPage() {
                   <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: "9px 20px", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                     Cancelar
                   </button>
-                  <button type="submit" disabled={loading} style={{ padding: "9px 20px", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading ? .7 : 1 }}>
+                  <button type="submit" disabled={loading} style={{ padding: "9px 20px", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading ? .7 : 1 }}>
                     {loading ? "Guardando..." : modalMode === "crear" ? "Crear Cliente" : "Guardar Cambios"}
                   </button>
                 </div>
@@ -358,8 +358,8 @@ export default function ClientesPage() {
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 24px 48px rgba(0,0,0,.2)" }}>
             <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <AlertCircle size={18} style={{ color: "#dc2626" }} />
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertCircle size={18} style={{ color: "#2563eb" }} />
               </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#111827" }}>Eliminar cliente</p>
@@ -368,7 +368,7 @@ export default function ClientesPage() {
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: "9px 0", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}>Cancelar</button>
-              <button onClick={() => handleDelete(deleteConfirmId)} style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}>Sí, eliminar</button>
+              <button onClick={() => handleDelete(deleteConfirmId)} style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}>Sí, eliminar</button>
             </div>
           </div>
         </div>

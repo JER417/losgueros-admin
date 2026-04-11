@@ -139,7 +139,7 @@ export default function TicketModal({ pedido, onClose }: Props) {
               style={{
                 flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                 padding: "10px 0", border: "none",
-                borderRadius: 10, background: "#dc2626", fontSize: 13, fontWeight: 700,
+                borderRadius: 10, background: "#2563eb", fontSize: 13, fontWeight: 700,
                 color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)",
               }}
             >
@@ -182,7 +182,7 @@ function TicketContent({ pedido }: { pedido: PedidoConDireccion }) {
         <div
           style={{
             display: "inline-block",
-            background: "#dc2626", color: "#fff",
+            background: "#2563eb", color: "#fff",
             padding: "4px 16px", borderRadius: 6,
             fontWeight: 700, fontSize: 15, letterSpacing: "0.1em",
             marginBottom: 8,

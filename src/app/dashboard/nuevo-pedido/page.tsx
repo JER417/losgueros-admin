@@ -67,7 +67,7 @@ const moneyToQty = (monto: number, precioUnitario: number): number => {
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-      {children}{required && <span style={{ color: "#dc2626" }}> *</span>}
+      {children}{required && <span style={{ color: "#2563eb" }}> *</span>}
     </label>
   );
 }
@@ -288,13 +288,13 @@ export default function NuevoPedidoPage() {
             <Printer size={14} /> {printing ? "Imprimiendo..." : "Imprimir ticket"}
           </button>
           <Link href="/dashboard/pedidos"
-            style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 20px", border: "none", borderRadius: 9, background: "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", textDecoration: "none" }}>
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 20px", border: "none", borderRadius: 9, background: "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", textDecoration: "none" }}>
             Ver pedidos
           </Link>
         </div>
         <button
           onClick={() => { setSavedOrder(null); setItems([newItem()]); setSearchTerm(""); setSelectedCliente(undefined); setMesa(""); setNotas(""); }}
-          style={{ marginTop: 14, color: "#dc2626", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+          style={{ marginTop: 14, color: "#2563eb", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
           + Crear otro pedido
         </button>
       </div>
@@ -344,7 +344,7 @@ export default function NuevoPedidoPage() {
             </div>
             <div style={{ display: "flex", alignItems: "flex-end" }}>
               <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", border: "1.5px solid", borderColor: express ? "#fde68a" : "#e5e7eb", borderRadius: 8, cursor: tipoPedido === "envio" ? "not-allowed" : "pointer", background: express ? "#fefce8" : "#fff", opacity: tipoPedido === "envio" ? .5 : 1, width: "100%" }}>
-                <input type="checkbox" checked={express} onChange={e => handleExpress(e.target.checked)} disabled={tipoPedido === "envio"} style={{ accentColor: "#dc2626", width: 14, height: 14 }} />
+                <input type="checkbox" checked={express} onChange={e => handleExpress(e.target.checked)} disabled={tipoPedido === "envio"} style={{ accentColor: "#2563eb", width: 14, height: 14 }} />
                 <span style={{ fontSize: 12, fontWeight: 600, color: express ? "#a16207" : "#6b7280" }}>Pedido express</span>
               </label>
             </div>
@@ -365,7 +365,7 @@ export default function NuevoPedidoPage() {
                       {filteredClientes.map(c => (
                         <button key={c.id} type="button" onClick={() => selectCliente(c)}
                           style={{ width: "100%", padding: "9px 12px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f9fafb", fontFamily: "var(--font-sans)" }}>
-                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#fef2f2", color: "#dc2626", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#eff6ff", color: "#2563eb", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             {`${c.nombre?.[0] ?? ""}${c.apellidos?.[0] ?? ""}`.toUpperCase()}
                           </div>
                           <span style={{ fontWeight: 600, color: "#111827" }}>{c.nombre} {c.apellidos}</span>
@@ -377,7 +377,7 @@ export default function NuevoPedidoPage() {
                   {showDropdown && searchTerm && filteredClientes.length === 0 && (
                     <div style={{ position: "absolute", zIndex: 10, top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,.1)", padding: "12px 14px", fontSize: 13, color: "#6b7280" }}>
                       No se encontró el cliente.{" "}
-                      <Link href="/dashboard/clientes" style={{ color: "#dc2626", fontWeight: 600, textDecoration: "none" }}>Registrarlo</Link>
+                      <Link href="/dashboard/clientes" style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>Registrarlo</Link>
                     </div>
                   )}
                 </div>
@@ -397,8 +397,8 @@ export default function NuevoPedidoPage() {
             </div>
 
             {showDireccion && (
-              <div style={{ marginTop: 14, padding: "12px 14px", background: hasAddress ? "#fefce8" : "#fef2f2", border: `1.5px solid ${hasAddress ? "#fde68a" : "#fecaca"}`, borderRadius: 10, display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13 }}>
-                <MapPin size={15} style={{ color: hasAddress ? "#ca8a04" : "#dc2626", flexShrink: 0, marginTop: 1 }} />
+              <div style={{ marginTop: 14, padding: "12px 14px", background: hasAddress ? "#fefce8" : "#eff6ff", border: `1.5px solid ${hasAddress ? "#fde68a" : "#bfdbfe"}`, borderRadius: 10, display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13 }}>
+                <MapPin size={15} style={{ color: hasAddress ? "#ca8a04" : "#2563eb", flexShrink: 0, marginTop: 1 }} />
                 {hasAddress && dir ? (
                   <div>
                     <p style={{ margin: 0, fontWeight: 700, color: "#374151" }}>Dirección de entrega</p>
@@ -407,8 +407,8 @@ export default function NuevoPedidoPage() {
                   </div>
                 ) : (
                   <div>
-                    <p style={{ margin: 0, fontWeight: 700, color: "#b91c1c" }}>Sin dirección registrada</p>
-                    <p style={{ margin: "3px 0 0", color: "#dc2626" }}><Link href="/dashboard/clientes" style={{ color: "#dc2626", textDecoration: "underline" }}>Editar cliente</Link> para agregar domicilio.</p>
+                    <p style={{ margin: 0, fontWeight: 700, color: "#1d4ed8" }}>Sin dirección registrada</p>
+                    <p style={{ margin: "3px 0 0", color: "#2563eb" }}><Link href="/dashboard/clientes" style={{ color: "#2563eb", textDecoration: "underline" }}>Editar cliente</Link> para agregar domicilio.</p>
                   </div>
                 )}
               </div>
@@ -523,9 +523,9 @@ export default function NuevoPedidoPage() {
                           style={{
                             flexShrink: 0, width: 30, height: 34,
                             border: "1.5px solid",
-                            borderColor: isMoneyMode ? "#dc2626" : "#d1d5db",
+                            borderColor: isMoneyMode ? "#2563eb" : "#d1d5db",
                             borderRadius: 7,
-                            background: isMoneyMode ? "#dc2626" : "#fff",
+                            background: isMoneyMode ? "#2563eb" : "#fff",
                             color: isMoneyMode ? "#fff" : "#6b7280",
                             cursor: "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center",
@@ -623,7 +623,7 @@ export default function NuevoPedidoPage() {
             Cancelar
           </Link>
           <button type="submit" disabled={loading}
-            style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 24px", border: "none", borderRadius: 9, background: loading ? "#fca5a5" : "#dc2626", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)" }}>
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 24px", border: "none", borderRadius: 9, background: loading ? "#93c5fd" : "#2563eb", fontSize: 13, fontWeight: 700, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)" }}>
             {loading ? "Guardando..." : "Guardar Pedido"}
           </button>
         </div>

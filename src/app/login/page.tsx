@@ -47,7 +47,7 @@ function LoginForm() {
       style={{
         minHeight: "100vh",
         display: "flex",
-        background: "linear-gradient(135deg, #7f1d1d 0%, #b91c1c 50%, #7f1d1d 100%)",
+        background: "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #1e3a8a 100%)",
       }}
     >
       {/* Left — branding panel */}
@@ -76,7 +76,7 @@ function LoginForm() {
               fontWeight: 800,
               fontSize: 11,
               letterSpacing: "0.14em",
-              color: "#7f1d1d",
+              color: "#1e3a8a",
               textTransform: "uppercase",
             }}
           >
@@ -108,7 +108,7 @@ function LoginForm() {
                 }}
               >
                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                  <path d="M1 4l3 3 5-6" stroke="#7f1d1d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M1 4l3 3 5-6" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <span style={{ fontSize: 14, color: "rgba(255,255,255,.8)", fontWeight: 500 }}>{f}</span>
@@ -137,8 +137,8 @@ function LoginForm() {
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
               borderRadius: 10,
               padding: "6px 14px",
               marginBottom: 16,
@@ -147,10 +147,10 @@ function LoginForm() {
             <div
               style={{
                 width: 8, height: 8, borderRadius: "50%",
-                background: "#dc2626",
+                background: "#2563eb",
               }}
             />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", letterSpacing: "0.08em" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", letterSpacing: "0.08em" }}>
               LOS GÜEROS
             </span>
           </div>
@@ -237,9 +237,9 @@ function LoginForm() {
             <div
               style={{
                 display: "flex", gap: 8, alignItems: "center",
-                padding: "10px 14px", background: "#fef2f2",
-                border: "1px solid #fecaca", borderRadius: 8,
-                fontSize: 13, color: "#b91c1c", fontWeight: 500,
+                padding: "10px 14px", background: "#eff6ff",
+                border: "1px solid #bfdbfe", borderRadius: 8,
+                fontSize: 13, color: "#1d4ed8", fontWeight: 500,
               }}
             >
               <AlertCircle size={15} style={{ flexShrink: 0 }} />
@@ -254,7 +254,7 @@ function LoginForm() {
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               gap: 8, width: "100%", padding: "11px 0",
-              background: loading ? "#fca5a5" : "#dc2626",
+              background: loading ? "#93c5fd" : "#2563eb",
               border: "none", borderRadius: 9, color: "#fff",
               fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
               fontFamily: "var(--font-sans)", transition: "background .15s",
@@ -296,7 +296,7 @@ function SpinIcon() {
 function Splash() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: "#f9fafb" }}>
-      <div style={{ width: 32, height: 32, border: "2.5px solid #fecaca", borderTopColor: "#dc2626", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+      <div style={{ width: 32, height: 32, border: "2.5px solid #bfdbfe", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

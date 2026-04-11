@@ -1,19 +1,16 @@
-/* 1. Imports externos (Siempre deben ir primero) */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap");
-
-/* 2. Framework / Tailwind */
 @import "tailwindcss";
 
-/* --- Root tokens -------------------------------------------------- */
+/* --- Root tokens --- */
 :root {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "DM Mono", "Courier New", monospace;
 
-  --red:        #dc2626;
-  --red-dark:   #b91c1c;
-  --red-deeper: #7f1d1d;
-  --red-light:  #fef2f2;
-  --red-mid:    #fee2e2;
+  --blue:        #2563eb;
+  --blue-dark:   #1d4ed8;
+  --blue-deeper: #1e3a8a;
+  --blue-light:  #eff6ff;
+  --blue-mid:    #dbeafe;
 
   --yellow:       #facc15;
   --yellow-dark:  #ca8a04;
@@ -32,7 +29,7 @@
   --gray-900: #111827;
 }
 
-/* --- Base --------------------------------------------------------- */
+/* --- Base --- */
 *, *::before, *::after { 
   box-sizing: border-box; 
 }
@@ -48,20 +45,20 @@ body {
   margin: 0;
 }
 
-/* --- Scrollbar ---------------------------------------------------- */
+/* --- Scrollbar --- */
 ::-webkit-scrollbar        { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: var(--gray-300); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--red); }
+::-webkit-scrollbar-thumb:hover { background: var(--blue); }
 
-/* --- Focus ring --------------------------------------------------- */
+/* --- Focus ring --- */
 :focus-visible {
-  outline: 2px solid var(--red);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* --- Shared input style ------------------------------------------- */
+/* --- Shared input style --- */
 .field {
   width: 100%;
   padding: 0.5rem 0.75rem;
@@ -74,14 +71,18 @@ body {
   transition: border-color 0.15s, box-shadow 0.15s;
   appearance: none;
 }
-.field::placeholder { color: var(--gray-400); }
-.field:focus {
-  outline: none;
-  border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(220,38,38,.12);
+
+.field::placeholder { 
+  color: var(--gray-400); 
 }
 
-/* --- Print --------------------------------------------------------- */
+.field:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* --- Print --- */
 @media print {
   body > * { display: none !important; }
   #ticket-print-root {

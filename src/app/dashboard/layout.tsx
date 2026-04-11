@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         style={{
           width: 224,
           flexShrink: 0,
-          background: "#7f1d1d",
+          background: "#1e3a8a",
           display: "flex",
           flexDirection: "column",
           boxShadow: "2px 0 12px rgba(0,0,0,.18)",
@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 fontWeight: 800,
                 fontSize: 11,
                 letterSpacing: "0.12em",
-                color: "#7f1d1d",
+                color: "#1e3a8a",
                 textTransform: "uppercase",
               }}
             >
@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   borderRadius: 8,
                   fontSize: 14,
                   fontWeight: active ? 700 : 500,
-                  color: active ? "#7f1d1d" : "rgba(255,255,255,.7)",
+                  color: active ? "#1e3a8a" : "rgba(255,255,255,.7)",
                   background: active ? "#facc15" : "transparent",
                   textDecoration: "none",
                   transition: "all .15s",
@@ -163,11 +163,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 borderRadius: 8,
                 fontSize: 14,
                 fontWeight: 700,
-                color: pathname === "/dashboard/nuevo-pedido" ? "#7f1d1d" : "#fff",
+                color: pathname === "/dashboard/nuevo-pedido" ? "#1e3a8a" : "#fff",
                 background: pathname === "/dashboard/nuevo-pedido"
                   ? "#facc15"
-                  : "rgba(220,38,38,.55)",
-                border: "1.5px solid rgba(220,38,38,.6)",
+                  : "rgba(37,99,235,.55)",
+                border: "1.5px solid rgba(37,99,235,.6)",
                 textDecoration: "none",
                 transition: "all .15s",
               }}
@@ -250,11 +250,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div
                 style={{
                   width: 40, height: 40, borderRadius: 10,
-                  background: "#fef2f2", display: "flex",
+                  background: "#eff6ff", display: "flex",
                   alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}
               >
-                <AlertTriangle size={18} style={{ color: "#dc2626" }} />
+                <AlertTriangle size={18} style={{ color: "#2563eb" }} />
               </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#111827" }}>
@@ -281,7 +281,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onClick={handleSignOut}
                 style={{
                   flex: 1, padding: "9px 0", border: "none",
-                  borderRadius: 9, background: "#dc2626", fontSize: 13,
+                  borderRadius: 9, background: "#2563eb", fontSize: 13,
                   fontWeight: 700, color: "#fff", cursor: "pointer",
                   fontFamily: "var(--font-sans)",
                 }}
@@ -308,8 +308,8 @@ function LoadingScreen() {
       <div style={{ textAlign: "center" }}>
         <div
           style={{
-            width: 36, height: 36, border: "3px solid #fecaca",
-            borderTopColor: "#dc2626", borderRadius: "50%",
+            width: 36, height: 36, border: "3px solid #bfdbfe",
+            borderTopColor: "#2563eb", borderRadius: "50%",
             animation: "spin 0.7s linear infinite", margin: "0 auto 12px",
           }}
         />
