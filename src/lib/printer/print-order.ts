@@ -44,6 +44,18 @@ export async function printOrderTicket(order: PedidoTicket): Promise<void> {
     return hex;
   });
 
+  // Primera impresión
+  for (const block of hexBlocks) {
+    await sendHexToEsp32(block);
+    await sleep(400);
+  }
+
+  await sleep(800);
+  await sendHexToEsp32(CUT);
+
+  await sleep(1000);
+
+  // Segunda impresión
   for (const block of hexBlocks) {
     await sendHexToEsp32(block);
     await sleep(400);
