@@ -6,291 +6,342 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
-  collection,
-  onSnapshot,
-  query,
-  orderBy,
-  Timestamp,
-  limit,
+  collection, onSnapshot, query, orderBy, Timestamp, limit,
 } from "firebase/firestore";
+import {
+  Users, ShoppingBag, TrendingUp, Receipt,
+  Search, ArrowRight, AlertCircle, Plus,
+} from "lucide-react";
 
 interface Cliente {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  telefono: string;
-  createdAt: Timestamp;
+  id: string; nombre: string; apellidos: string; telefono: string; createdAt: Timestamp;
 }
-
 interface Pedido {
-  id: string;
-  clienteNombre: string;
-  totalGeneral: number;
-  status: string;
-  createdAt: Timestamp;
+  id: string; clienteNombre: string; totalGeneral: number; status: string; createdAt: Timestamp;
 }
 
-// Skeleton para listas
-function Skeleton({ rows = 3 }: { rows?: number }) {
+/* ── helpers ─────────────────────────────────── */
+const initials = (n: string, a: string) =>
+  `${n?.[0] ?? ""}${a?.[0] ?? ""}`.toUpperCase();
+
+const fmtDate = (ts: Timestamp | undefined) =>
+  ts?.toDate().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "2-digit" }) ?? "—";
+
+const fmtMoney = (n: number) =>
+  n.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+
+/* ── sub-components ──────────────────────────── */
+function StatCard({
+  label, value, sub, icon: Icon, color,
+}: {
+  label: string; value: string | number; sub: string;
+  icon: React.ElementType; color: "red" | "yellow" | "blue" | "green";
+}) {
+  const cfg = {
+    red:    { bg: "#eff6ff", iconBg: "#2563eb", text: "#1d4ed8" },
+    yellow: { bg: "#fefce8", iconBg: "#ca8a04", text: "#a16207" },
+    blue:   { bg: "#eff6ff", iconBg: "#2563eb", text: "#1d4ed8" },
+    green:  { bg: "#f0fdf4", iconBg: "#16a34a", text: "#15803d" },
+  }[color];
+
   return (
-    <div className="space-y-3">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 py-2">
-          <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse" />
-          <div className="flex-1 space-y-1.5">
-            <div className="h-3 w-32 rounded bg-slate-200 animate-pulse" />
-            <div className="h-3 w-20 rounded bg-slate-200 animate-pulse" />
-          </div>
+    <div
+      style={{
+        background: "#fff",
+        border: "1.5px solid #f3f4f6",
+        borderRadius: 14,
+        padding: "20px 20px 16px",
+        boxShadow: "0 1px 4px rgba(0,0,0,.05)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          {label}
+        </p>
+        <div
+          style={{
+            width: 34, height: 34, borderRadius: 9,
+            background: cfg.iconBg,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <Icon size={16} style={{ color: "#fff" }} />
         </div>
-      ))}
+      </div>
+      <div>
+        <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
+          {value}
+        </p>
+        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9ca3af", fontWeight: 500 }}>{sub}</p>
+      </div>
     </div>
   );
 }
 
+function SkeletonRow() {
+  return (
+    <div style={{ display: "flex", gap: 12, padding: "12px 0", alignItems: "center" }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#f3f4f6" }} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ height: 12, width: "55%", background: "#f3f4f6", borderRadius: 4 }} />
+        <div style={{ height: 10, width: "35%", background: "#f3f4f6", borderRadius: 4 }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── main ────────────────────────────────────── */
 export default function DashboardPage() {
   const { user } = useAuth();
-  const isOwner = user?.role === "owner";
+  const isOwner  = user?.role === "owner";
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [searchPhone, setSearchPhone] = useState("");
-  const [searchResults, setSearchResults] = useState<Cliente[]>([]);
+  const [clientes,        setClientes]        = useState<Cliente[]>([]);
+  const [pedidos,         setPedidos]         = useState<Pedido[]>([]);
+  const [searchPhone,     setSearchPhone]     = useState("");
+  const [searchResults,   setSearchResults]   = useState<Cliente[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
-  const [loadingPedidos, setLoadingPedidos] = useState(true);
-  const [networkError, setNetworkError] = useState("");
+  const [loadingPedidos,  setLoadingPedidos]  = useState(true);
+  const [networkError,    setNetworkError]    = useState("");
 
-  // Un solo listener para clientes
   useEffect(() => {
     const q = query(collection(db, "clientes"), orderBy("createdAt", "desc"));
-    return onSnapshot(
-      q,
-      (snap) => {
-        setClientes(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Cliente[]);
-        setLoadingClientes(false);
-      },
-      // FIX: manejar errores de red en onSnapshot
-      (error) => {
-        console.error("Error cargando clientes:", error);
-        setNetworkError("Error de conexión. Verifica tu red.");
-        setLoadingClientes(false);
-      }
+    return onSnapshot(q,
+      snap => { setClientes(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Cliente[]); setLoadingClientes(false); },
+      err  => { console.error(err); setNetworkError("Error de conexión. Verifica tu red."); setLoadingClientes(false); }
     );
   }, []);
 
-  // Pedidos con límite para evitar cargar todo el historial
   useEffect(() => {
     const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"), limit(100));
-    return onSnapshot(
-      q,
-      (snap) => {
-        setPedidos(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Pedido[]);
-        setLoadingPedidos(false);
-      },
-      (error) => {
-        console.error("Error cargando pedidos:", error);
-        setNetworkError("Error de conexión. Verifica tu red.");
-        setLoadingPedidos(false);
-      }
+    return onSnapshot(q,
+      snap => { setPedidos(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Pedido[]); setLoadingPedidos(false); },
+      err  => { console.error(err); setNetworkError("Error de conexión. Verifica tu red."); setLoadingPedidos(false); }
     );
   }, []);
 
   const stats = useMemo(() => {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const nuevos7dias = clientes.filter(
-      (c) => c.createdAt?.toDate() >= sevenDaysAgo
-    ).length;
-
-    const pedidosMes = pedidos.filter(
-      (p) => p.createdAt?.toDate() >= firstOfMonth
-    ).length;
-
-    const ticketPromedio =
-      pedidos.length > 0
+    const now         = new Date();
+    const sevenAgo    = new Date(now.getTime() - 7 * 86400000);
+    const firstMonth  = new Date(now.getFullYear(), now.getMonth(), 1);
+    return {
+      nuevos7d:     clientes.filter(c => c.createdAt?.toDate() >= sevenAgo).length,
+      pedidosMes:   pedidos.filter(p => p.createdAt?.toDate() >= firstMonth).length,
+      ticketPromedio: pedidos.length
         ? Math.round(pedidos.reduce((s, p) => s + (p.totalGeneral ?? 0), 0) / pedidos.length)
-        : 0;
-
-    return { nuevos7dias, pedidosMes, ticketPromedio };
+        : 0,
+    };
   }, [clientes, pedidos]);
 
-  const recentClientes = useMemo(() => clientes.slice(0, 5), [clientes]);
-
   useEffect(() => {
-    if (searchPhone.replace(/\s/g, "").length >= 3) {
-      const term = searchPhone.replace(/\s/g, "");
-      setSearchResults(
-        clientes.filter((c) => c.telefono.replace(/\s/g, "").includes(term))
-      );
+    const term = searchPhone.replace(/\s/g, "");
+    if (term.length >= 3) {
+      setSearchResults(clientes.filter(c => c.telefono.replace(/\s/g, "").includes(term)));
     } else {
       setSearchResults([]);
     }
   }, [searchPhone, clientes]);
 
-  const getInitials = (nombre: string, apellidos: string) =>
-    `${nombre?.[0] ?? ""}${apellidos?.[0] ?? ""}`.toUpperCase();
-
-  const fmtDate = (ts: Timestamp) =>
-    ts?.toDate().toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "numeric",
-      year: "numeric",
-    }) ?? "";
+  const card: React.CSSProperties = {
+    background: "#fff",
+    border: "1.5px solid #f3f4f6",
+    borderRadius: 14,
+    padding: "20px 24px",
+    boxShadow: "0 1px 4px rgba(0,0,0,.05)",
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Error de red */}
-      {networkError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          ⚠️ {networkError}
-        </div>
-      )}
-
-      {/* Header */}
-      <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+    <div style={{ maxWidth: 860, margin: "0 auto" }}>
+      {/* Page header */}
+      <div style={{ marginBottom: 28, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Dashboard</h1>
-          <p className="text-sm text-slate-600">
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
+            Dashboard
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "#9ca3af", fontWeight: 400 }}>
             Bienvenido, {user?.displayName || user?.email}
           </p>
         </div>
-        <div className="flex gap-3">
-          <Link
-            href="/dashboard/clientes"
-            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-          >
-            Nuevo Cliente
-          </Link>
-          <Link
-            href="/dashboard/nuevo-pedido"
-            className="rounded-full bg-[#facc15] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400"
-          >
-            Nuevo Pedido
-          </Link>
-        </div>
-      </header>
+        <Link
+          href="/dashboard/nuevo-pedido"
+          style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "9px 18px", background: "#2563eb",
+            border: "none", borderRadius: 9, color: "#fff",
+            fontSize: 13, fontWeight: 700, cursor: "pointer",
+            textDecoration: "none", transition: "background .15s",
+          }}
+        >
+          <Plus size={14} /> Nuevo Pedido
+        </Link>
+      </div>
 
-      {/* Stats — solo owner */}
-      {isOwner && (
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Total clientes", value: clientes.length, sub: "Registrados" },
-            { label: "Nuevos (7 días)", value: stats.nuevos7dias, sub: "Últimos 7 días" },
-            { label: "Pedidos del mes", value: stats.pedidosMes, sub: "Mes actual" },
-            {
-              label: "Ticket promedio",
-              value: `$${stats.ticketPromedio.toLocaleString("es-MX")}`,
-              sub: "Por pedido",
-            },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                {stat.label}
-              </p>
-              {loadingPedidos || loadingClientes ? (
-                <div className="mt-3 h-8 w-16 animate-pulse rounded bg-slate-200" />
-              ) : (
-                <p className="mt-3 text-2xl font-semibold text-slate-900">{stat.value}</p>
-              )}
-              <p className="text-xs text-slate-500">{stat.sub}</p>
-            </div>
-          ))}
-        </section>
+      {/* Error banner */}
+      {networkError && (
+        <div
+          style={{
+            display: "flex", gap: 8, alignItems: "center",
+            padding: "11px 16px", marginBottom: 20,
+            background: "#eff6ff", border: "1px solid #bfdbfe",
+            borderRadius: 10, fontSize: 13, color: "#1d4ed8", fontWeight: 500,
+          }}
+        >
+          <AlertCircle size={15} /> {networkError}
+        </div>
       )}
 
-      {/* Búsqueda por teléfono */}
-      <section className="rounded-xl bg-white p-4 shadow-sm">
-        <label className="mb-1 block text-sm font-medium text-slate-700">
-          Buscar cliente por teléfono
-        </label>
-        <input
-          type="tel"
-          maxLength={10}
-          value={searchPhone}
-          onChange={(e) => setSearchPhone(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 sm:max-w-xs"
-          placeholder="Ingresa el número..."
-        />
+      {/* Stats — owner only */}
+      {isOwner && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(185px, 1fr))",
+            gap: 14,
+            marginBottom: 24,
+          }}
+        >
+          <StatCard label="Total clientes"   value={loadingClientes ? "—" : clientes.length}   sub="Registrados"   icon={Users}        color="red"    />
+          <StatCard label="Nuevos (7 días)"  value={loadingClientes ? "—" : stats.nuevos7d}     sub="Últimos 7 días" icon={TrendingUp}   color="blue"   />
+          <StatCard label="Pedidos del mes"  value={loadingPedidos  ? "—" : stats.pedidosMes}   sub="Mes actual"    icon={ShoppingBag}  color="green"  />
+          <StatCard label="Ticket promedio"  value={loadingPedidos  ? "—" : fmtMoney(stats.ticketPromedio)} sub="Por pedido" icon={Receipt} color="yellow" />
+        </div>
+      )}
+
+      {/* Búsqueda rápida */}
+      <div style={{ ...card, marginBottom: 20 }}>
+        <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#374151" }}>
+          Búsqueda rápida de cliente
+        </p>
+        <div style={{ position: "relative", maxWidth: 340 }}>
+          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+          <input
+            type="tel"
+            maxLength={10}
+            value={searchPhone}
+            onChange={e => setSearchPhone(e.target.value)}
+            placeholder="Número de teléfono..."
+            className="field"
+            style={{ paddingLeft: 36 }}
+          />
+        </div>
 
         {searchResults.length > 0 && (
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <p className="mb-2 text-sm font-medium text-slate-700">
+          <div style={{ marginTop: 14, borderTop: "1.5px solid #f3f4f6", paddingTop: 14 }}>
+            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               {searchResults.length} resultado{searchResults.length !== 1 && "s"}
             </p>
-            <ul className="divide-y divide-slate-100">
-              {searchResults.map((c) => (
-                <li key={c.id} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {getInitials(c.nombre, c.apellidos)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        {c.nombre} {c.apellidos}
-                      </p>
-                      <p className="text-xs text-slate-500">{c.telefono}</p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/dashboard/nuevo-pedido"
-                    className="rounded-lg bg-[#facc15] px-3 py-1 text-xs font-medium text-slate-900 hover:bg-amber-400"
+            {searchResults.map(c => (
+              <div
+                key={c.id}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "10px 0", borderBottom: "1px solid #f9fafb",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36, height: 36, borderRadius: "50%",
+                      background: "#eff6ff", color: "#2563eb",
+                      fontSize: 12, fontWeight: 800,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}
                   >
-                    Nuevo Pedido
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    {initials(c.nombre, c.apellidos)}
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#111827" }}>
+                      {c.nombre} {c.apellidos}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>{c.telefono}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard/nuevo-pedido"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "6px 12px", background: "#facc15",
+                    borderRadius: 7, fontSize: 12, fontWeight: 700,
+                    color: "#1e3a8a", textDecoration: "none",
+                  }}
+                >
+                  Nuevo Pedido <ArrowRight size={11} />
+                </Link>
+              </div>
+            ))}
           </div>
         )}
 
         {searchPhone.replace(/\s/g, "").length >= 3 && searchResults.length === 0 && !loadingClientes && (
-          <p className="mt-3 text-sm text-slate-500">
+          <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
             No se encontró ningún cliente.{" "}
-            <Link href="/dashboard/clientes" className="font-medium text-amber-600 hover:underline">
+            <Link href="/dashboard/clientes" style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>
               Registrar cliente nuevo
             </Link>
-          </p>
+          </div>
         )}
-      </section>
+      </div>
 
       {/* Clientes recientes */}
-      <section className="rounded-xl bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-800">Clientes recientes</h2>
-          <Link href="/dashboard/clientes" className="text-xs font-medium text-slate-500 hover:text-slate-700">
-            Ver todos
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#374151" }}>Clientes recientes</p>
+          <Link
+            href="/dashboard/clientes"
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              fontSize: 12, color: "#2563eb", fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            Ver todos <ArrowRight size={12} />
           </Link>
         </div>
 
-        {loadingClientes ? (
-          <Skeleton rows={4} />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {recentClientes.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                    {getInitials(c.nombre, c.apellidos)}
+        {loadingClientes
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
+          : clientes.slice(0, 6).map(c => (
+              <div
+                key={c.id}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "10px 0", borderBottom: "1px solid #f9fafb",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 36, height: 36, borderRadius: "50%",
+                      background: "#eff6ff", color: "#2563eb",
+                      fontSize: 12, fontWeight: 800,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {initials(c.nombre, c.apellidos)}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-800">
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#111827" }}>
                       {c.nombre} {c.apellidos}
                     </p>
-                    <p className="text-xs text-slate-500">{c.telefono}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>{c.telefono}</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400">{fmtDate(c.createdAt)}</p>
-              </li>
-            ))}
-            {recentClientes.length === 0 && (
-              <li className="py-4 text-center text-sm text-slate-500">
-                No hay clientes registrados
-              </li>
-            )}
-          </ul>
+                <span style={{ fontSize: 12, color: "#d1d5db", fontWeight: 500 }}>
+                  {fmtDate(c.createdAt)}
+                </span>
+              </div>
+            ))
+        }
+        {!loadingClientes && clientes.length === 0 && (
+          <p style={{ textAlign: "center", color: "#d1d5db", fontSize: 14, padding: "24px 0", margin: 0 }}>
+            No hay clientes registrados
+          </p>
         )}
-      </section>
+      </div>
     </div>
   );
 }
