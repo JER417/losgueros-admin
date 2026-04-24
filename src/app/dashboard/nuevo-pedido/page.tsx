@@ -5,7 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
-import { printOrderTicket } from "@/lib/printer/print-order";
+import { doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
+import { buildPrintJobDocument } from "@/lib/printer/printjobs";
+import { mapPedidoToTicket, type PedidoForPrint } from "@/lib/printer/order-print-mapper";
 import {
   collection, addDoc, onSnapshot, query,
   orderBy, Timestamp, where,
@@ -99,7 +101,7 @@ export default function NuevoPedidoPage() {
   const [notas,               setNotas]               = useState("");
   const [items,               setItems]               = useState<PedidoItem[]>([newItem()]);
   const [loading,             setLoading]             = useState(false);
-  const [savedOrder,          setSavedOrder]          = useState<any>(null);
+  const [savedOrder,          setSavedOrder]          = useState<PedidoForPrint | null>(null);
   const [printing,            setPrinting]            = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -246,23 +248,45 @@ export default function NuevoPedidoPage() {
       if (tipoPedido === "mesa" && mesa.trim()) pedidoData.mesa = mesa.trim();
       if (express && nombreClienteManual.trim()) pedidoData.nombreClienteManual = nombreClienteManual.trim();
 
-      await addDoc(collection(db, "pedidos"), pedidoData);
-      setSavedOrder({
-        clienteNombre: pedidoData.clienteNombre, clienteTelefono: pedidoData.clienteTelefono,
-        direccionEntrega: tipoPedido === "envio" && selectedCliente?.direccion ? selectedCliente.direccion : undefined,
-        createdAt: new Date(), tipoPedido: pedidoData.tipoPedido, metodoPago: pedidoData.metodoPago,
-        notas: pedidoData.notas, items: pedidoData.items, totalGeneral: pedidoData.totalGeneral,
-      });
+      const pedidoRef = await addDoc(collection(db, "pedidos"), pedidoData);
+
+      setSavedOrder(
+        mapPedidoToTicket({
+          pedidoId: pedidoRef.id,
+          pedidoData,
+        })
+      );
     } catch (err) { console.error(err); alert("Error al guardar el pedido"); }
     finally { setLoading(false); }
   };
 
   const handlePrint = async () => {
-    if (!savedOrder) return;
+    if (!savedOrder?.pedidoId) return;
+
     setPrinting(true);
-    try { await printOrderTicket(savedOrder); }
-    catch { alert("No se pudo imprimir el ticket"); }
-    finally { setPrinting(false); }
+    try {
+      const printJob = buildPrintJobDocument({
+        pedidoId: savedOrder.pedidoId,
+        order: savedOrder,
+      });
+
+      const docRef = await addDoc(collection(db, "printjobs"), printJob);
+
+      await updateDoc(doc(db, "printSignals", "los-gueros-caja-01"), {
+        eventVersion: increment(1),
+        mode: "armed",
+        reason: "print_requested",
+        lastJobId: docRef.id,
+        updatedAt: serverTimestamp(),
+      });
+
+      alert("Ticket enviado a la cola de impresión");
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo enviar el ticket a impresión");
+    } finally {
+      setPrinting(false);
+    }
   };
 
   const dir = selectedCliente?.direccion;
