@@ -101,7 +101,6 @@ export default function DashboardPage() {
   const [clientes,        setClientes]        = useState<Cliente[]>([]);
   const [pedidos,         setPedidos]         = useState<Pedido[]>([]);
   const [searchPhone,     setSearchPhone]     = useState("");
-  const [searchResults,   setSearchResults]   = useState<Cliente[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [loadingPedidos,  setLoadingPedidos]  = useState(true);
   const [networkError,    setNetworkError]    = useState("");
@@ -135,13 +134,10 @@ export default function DashboardPage() {
     };
   }, [clientes, pedidos]);
 
-  useEffect(() => {
+  const searchResults = useMemo(() => {
     const term = searchPhone.replace(/\s/g, "");
-    if (term.length >= 3) {
-      setSearchResults(clientes.filter(c => c.telefono.replace(/\s/g, "").includes(term)));
-    } else {
-      setSearchResults([]);
-    }
+    if (term.length < 3) return [];
+    return clientes.filter(c => c.telefono.replace(/\s/g, "").includes(term));
   }, [searchPhone, clientes]);
 
   const card: React.CSSProperties = {

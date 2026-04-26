@@ -11,7 +11,6 @@ import {
   PlusCircle,
   LogOut,
   Package,
-  X,
   AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";

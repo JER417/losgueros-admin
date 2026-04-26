@@ -82,8 +82,12 @@ export default function ProductosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, "productos", id));
-    setDeleteConfirmId(null);
+    try {
+      await deleteDoc(doc(db, "productos", id));
+      setDeleteConfirmId(null);
+    } catch {
+      alert("Error al eliminar el producto. Inténtalo de nuevo.");
+    }
   };
 
   if (user?.role !== "owner") return null;

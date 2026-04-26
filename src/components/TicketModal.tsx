@@ -18,10 +18,16 @@ interface DireccionEntrega {
 
 export interface PedidoConDireccion {
   id: string;
+  orderNumber?: string;
   clienteNombre: string;
   clienteTelefono: string;
   direccionEntrega?: DireccionEntrega | null;
   fecha: Timestamp;
+  tipoPedido?: string;
+  metodoPago?: string;
+  mesa?: string;
+  express?: boolean;
+  nombreClienteManual?: string;
   notas: string;
   items: PedidoItem[];
   totalGeneral: number;

@@ -60,12 +60,6 @@ function line(left: string, right: string, width = TICKET_WIDTH): string {
   return l + " ".repeat(spaces) + r;
 }
 
-function centerText(text: string, width = TICKET_WIDTH): string {
-  const t = fitText(text, width);
-  if (t.length >= width) return t;
-  const leftPad = Math.floor((width - t.length) / 2);
-  return " ".repeat(leftPad) + t;
-}
 
 function formatDateTime(value?: Date | string | null): string {
   if (!value) return "-";

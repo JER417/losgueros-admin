@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import {
   Plus, X, Phone, MapPin, Search, Pencil,
-  Trash2, AlertCircle, User, ChevronDown,
+  Trash2, AlertCircle, User,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 

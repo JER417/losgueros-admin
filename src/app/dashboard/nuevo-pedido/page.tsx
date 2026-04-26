@@ -15,6 +15,7 @@ import {
   Printer, CheckCircle, Search, ArrowLeftRight,
 } from "lucide-react";
 import type { Producto } from "@/types";
+import type { PedidoTicket } from "@/lib/printer/ticket";
 
 interface DireccionCliente {
   calle: string; noExt: string; noInt?: string; colonia: string;
@@ -35,6 +36,25 @@ interface PedidoItem {
 }
 type TipoPedido = "llevar" | "recoger" | "envio" | "mesa";
 type MetodoPago = "efectivo" | "transferencia" | "tarjeta" | "pendiente" | "otro";
+
+interface PedidoPayload {
+  orderNumber: string;
+  clienteId: string;
+  clienteNombre: string;
+  clienteTelefono: string;
+  tipoPedido: TipoPedido;
+  metodoPago: MetodoPago;
+  express: boolean;
+  fecha: Timestamp;
+  notas: string;
+  items: { cantidad: number; concepto: string; precioUnitario: number; total: number }[];
+  totalGeneral: number;
+  status: string;
+  createdAt: Timestamp;
+  direccionEntrega?: DireccionCliente;
+  mesa?: string;
+  nombreClienteManual?: string;
+}
 
 const CLIENTE_EXPRESS_NOMBRE = "Cliente Express";
 const TIPOS: { value: TipoPedido; label: string }[] = [
@@ -99,7 +119,7 @@ export default function NuevoPedidoPage() {
   const [notas,               setNotas]               = useState("");
   const [items,               setItems]               = useState<PedidoItem[]>([newItem()]);
   const [loading,             setLoading]             = useState(false);
-  const [savedOrder,          setSavedOrder]          = useState<any>(null);
+  const [savedOrder,          setSavedOrder]          = useState<PedidoTicket | null>(null);
   const [printing,            setPrinting]            = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -232,12 +252,14 @@ export default function NuevoPedidoPage() {
     const clienteFinal = express && expressCliente ? expressCliente : selectedCliente;
     setLoading(true);
     try {
-      const pedidoData: any = {
+      const orderNumber = uuidv4().slice(0, 8).toUpperCase();
+      const pedidoData: PedidoPayload = {
+        orderNumber,
         clienteId: clienteFinal?.id ?? "",
         clienteNombre: clienteFinal ? `${clienteFinal.nombre} ${clienteFinal.apellidos}`.trim() : "",
         clienteTelefono: clienteFinal?.telefono ?? "",
         tipoPedido, metodoPago, express,
-        fecha: Timestamp.fromDate(new Date(fecha)),
+        fecha: Timestamp.fromDate(new Date(`${fecha}T12:00:00`)),
         notas,
         items: items.map(({ cantidad, concepto, precioUnitario, total }) => ({ cantidad, concepto, precioUnitario, total })),
         totalGeneral, status: "pendiente", createdAt: Timestamp.now(),
@@ -464,14 +486,14 @@ export default function NuevoPedidoPage() {
                   <div style={{ position: "relative" }}>
                     <input
                       type="number" min="0.001" step="0.001"
-                      value={isMoneyMode ? item.cantidad : item.cantidad}
+                      value={isMoneyMode ? item.cantidad : (item.cantidad || "")}
                       onChange={e => !isMoneyMode && handleQtyChange(item.id, parseFloat(e.target.value) || 0)}
                       readOnly={isMoneyMode}
                       className="field"
                       style={{
                         textAlign: "center", padding: "8px 3px", fontSize: 13,
                         background: isMoneyMode ? "#f3f4f6" : "#fff",
-                        color: isMoneyMode ? "#9ca3af" : "#111827",
+                        color: isMoneyMode ? "transparent" : "#111827",
                         cursor: isMoneyMode ? "default" : "text",
                       }}
                       title={isMoneyMode ? `${qtyDisplay} ${producto?.unidad ?? ""} (calculado)` : "Cantidad"}

@@ -6,10 +6,11 @@ import Link from "next/link";
 import { db } from "@/lib/firebase";
 import {
   collection, onSnapshot, query, orderBy,
-  doc, updateDoc, Timestamp, limit,
+  doc, updateDoc, deleteDoc, Timestamp, limit,
 } from "firebase/firestore";
-import { Plus, Phone, Calendar, FileText, Receipt, AlertCircle, ChevronDown, Search, X } from "lucide-react";
+import { Plus, Phone, Calendar, FileText, Receipt, AlertCircle, ChevronDown, Search, X, Trash2 } from "lucide-react";
 import TicketModal, { PedidoConDireccion } from "@/components/TicketModal";
+import { useAuth } from "@/context/AuthContext";
 
 const STATUS_OPTIONS = [
   { value: "pendiente",  label: "Pendiente",  bg: "#fefce8", text: "#a16207",  border: "#fde68a" },
@@ -57,12 +58,16 @@ function Highlight({ text, term }: { text: string; term: string }) {
 }
 
 export default function PedidosPage() {
-  const [pedidos,      setPedidos]      = useState<PedidoConDireccion[]>([]);
-  const [ticketPedido, setTicketPedido] = useState<PedidoConDireccion | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>("todos");
-  const [searchQuery,  setSearchQuery]  = useState("");
-  const [loadingData,  setLoadingData]  = useState(true);
-  const [networkError, setNetworkError] = useState("");
+  const { user } = useAuth();
+  const isOwner  = user?.role === "owner";
+
+  const [pedidos,         setPedidos]         = useState<PedidoConDireccion[]>([]);
+  const [ticketPedido,    setTicketPedido]    = useState<PedidoConDireccion | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [filterStatus,    setFilterStatus]    = useState<string>("todos");
+  const [searchQuery,     setSearchQuery]     = useState("");
+  const [loadingData,     setLoadingData]     = useState(true);
+  const [networkError,    setNetworkError]    = useState("");
 
   useEffect(() => {
     const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"), limit(100));
@@ -73,7 +78,20 @@ export default function PedidosPage() {
   }, []);
 
   const handleUpdateStatus = async (id: string, status: string) => {
-    await updateDoc(doc(db, "pedidos", id), { status });
+    try {
+      await updateDoc(doc(db, "pedidos", id), { status });
+    } catch {
+      alert("No se pudo actualizar el estado. Verifica tu conexión.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "pedidos", id));
+      setDeleteConfirmId(null);
+    } catch {
+      alert("Error al eliminar el pedido. Inténtalo de nuevo.");
+    }
   };
 
   const getStatusCfg = (status: string) =>
@@ -81,7 +99,7 @@ export default function PedidosPage() {
 
   /* ── Filtrado combinado: status + búsqueda ── */
   const filtered = useMemo(() => {
-    let list = filterStatus === "todos" ? pedidos : pedidos.filter(p => p.status === filterStatus);
+    const list = filterStatus === "todos" ? pedidos : pedidos.filter(p => p.status === filterStatus);
 
     const q = searchQuery.trim().toLowerCase();
     if (!q) return list;
@@ -89,7 +107,7 @@ export default function PedidosPage() {
     return list.filter(p => {
       const nombre   = (p.clienteNombre    ?? "").toLowerCase();
       const telefono = (p.clienteTelefono  ?? "").replace(/\s/g, "");
-      const orderId  = ((p as any).orderNumber ?? p.id ?? "").toLowerCase();
+      const orderId  = (p.orderNumber ?? p.id ?? "").toLowerCase();
       const qClean   = q.replace(/\s/g, "");
 
       return (
@@ -169,15 +187,13 @@ export default function PedidosPage() {
           {["todos", ...STATUS_OPTIONS.map(s => s.value)].map(status => {
             const active = filterStatus === status;
             const cfg    = STATUS_OPTIONS.find(s => s.value === status);
-            // count respects active search
-            const base   = hasSearch ? filtered : pedidos;
             const count  = status === "todos"
               ? (hasSearch ? filtered.length : pedidos.length)
               : pedidos.filter(p => p.status === status && (
                   !hasSearch || (
                     (p.clienteNombre ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
                     (p.clienteTelefono ?? "").replace(/\s/g, "").includes(searchQuery.trim().replace(/\s/g, "")) ||
-                    ((p as any).orderNumber ?? p.id ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase())
+                    (p.orderNumber ?? p.id ?? "").toLowerCase().includes(searchQuery.trim().toLowerCase())
                   )
                 )).length;
 
@@ -208,7 +224,7 @@ export default function PedidosPage() {
           ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} />)
           : filtered.map(pedido => {
               const cfg        = getStatusCfg(pedido.status);
-              const orderNum   = (pedido as any).orderNumber ?? "";
+              const orderNum   = pedido.orderNumber ?? "";
               const searchTerm = searchQuery.trim();
 
               return (
@@ -256,9 +272,9 @@ export default function PedidosPage() {
                           <ChevronDown size={10} style={{ position: "absolute", right: 6, pointerEvents: "none", color: cfg.text }} />
                         </div>
                         {/* Tipo */}
-                        {(pedido as any).tipoPedido && (
+                        {pedido.tipoPedido && (
                           <span style={{ fontSize: 11, color: "#9ca3af", background: "#f3f4f6", padding: "3px 8px", borderRadius: 20, fontWeight: 600 }}>
-                            {TIPO_LABELS[(pedido as any).tipoPedido] ?? (pedido as any).tipoPedido}
+                            {TIPO_LABELS[pedido.tipoPedido] ?? pedido.tipoPedido}
                           </span>
                         )}
                       </div>
@@ -271,7 +287,7 @@ export default function PedidosPage() {
                         )}
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <Calendar size={11} style={{ color: "#2563eb" }} />
-                          {fmtDate((pedido as any).fecha)}
+                          {fmtDate(pedido.fecha)}
                         </span>
                       </div>
                     </div>
@@ -281,19 +297,36 @@ export default function PedidosPage() {
                       <span style={{ fontSize: 20, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
                         {fmtMoney(pedido.totalGeneral)}
                       </span>
-                      <button
-                        onClick={() => setTicketPedido(pedido)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 5,
-                          padding: "5px 12px", border: "1.5px solid #f3f4f6",
-                          borderRadius: 8, background: "#fff",
-                          fontSize: 11, fontWeight: 600, color: "#6b7280",
-                          cursor: "pointer", fontFamily: "var(--font-sans)",
-                          transition: "all .12s",
-                        }}
-                      >
-                        <Receipt size={12} /> Ver ticket
-                      </button>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => setTicketPedido(pedido)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            padding: "5px 12px", border: "1.5px solid #f3f4f6",
+                            borderRadius: 8, background: "#fff",
+                            fontSize: 11, fontWeight: 600, color: "#6b7280",
+                            cursor: "pointer", fontFamily: "var(--font-sans)",
+                            transition: "all .12s",
+                          }}
+                        >
+                          <Receipt size={12} /> Ver ticket
+                        </button>
+                        {isOwner && (
+                          <button
+                            onClick={() => setDeleteConfirmId(pedido.id)}
+                            style={{
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              width: 30, height: 30, border: "1.5px solid #fecaca",
+                              borderRadius: 8, background: "#fff",
+                              cursor: "pointer", color: "#ef4444",
+                              transition: "all .12s",
+                            }}
+                            title="Eliminar pedido"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -342,6 +375,37 @@ export default function PedidosPage() {
       </div>
 
       {ticketPedido && <TicketModal pedido={ticketPedido} onClose={() => setTicketPedido(null)} />}
+
+      {/* ── Confirm delete modal ── */}
+      {deleteConfirmId && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 360, boxShadow: "0 24px 48px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertCircle size={18} style={{ color: "#ef4444" }} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#111827" }}>Eliminar pedido</p>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>Esta acción no se puede deshacer.</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                style={{ flex: 1, padding: "9px 0", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                style={{ flex: 1, padding: "9px 0", border: "none", borderRadius: 9, background: "#ef4444", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
