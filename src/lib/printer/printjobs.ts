@@ -10,6 +10,10 @@ function strToHex(text: string): string {
 
 const INIT = "1B40";
 const CENTER = "1B6101";
+
+const NORMAL_SIZE = "1D2100";
+const DOUBLE_WIDTH = "1D2110";
+
 const CUT = "1B64011D564100";
 
 export type PrintJobStatus = "pending" | "printing" | "printed" | "error";
@@ -42,7 +46,9 @@ export function buildPrintJobDocument(params: {
   const hexBlocks = textBlocks.map((block) => {
     let hex = INIT;
     hex += CENTER;
+    hex += DOUBLE_WIDTH;
     hex += strToHex(block);
+    hex += NORMAL_SIZE;
     return hex;
   });
 
@@ -59,4 +65,4 @@ export function buildPrintJobDocument(params: {
     printedAt: null,
     error: null,
   };
-} 
+}
