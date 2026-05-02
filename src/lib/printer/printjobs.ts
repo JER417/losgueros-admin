@@ -59,4 +59,4 @@ export function buildPrintJobDocument(params: {
     printedAt: null,
     error: null,
   };
-}
+} 
