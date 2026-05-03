@@ -192,6 +192,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             {user.email}
           </p>
+          <p
+            style={{
+              margin: "0 0 6px 12px",
+              fontSize: 11,
+              color: "rgba(255,255,255,.35)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            SYstem Version: VC.2026.1.0
+          </p>
           <button
             onClick={() => setConfirmLogout(true)}
             style={{
