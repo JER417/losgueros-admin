@@ -202,7 +202,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               whiteSpace: "nowrap",
             }}
           >
-            SYstem Version: VC.2026.1.0
+            System Version: VC.2026.1.0
           </p>
           <button
             onClick={() => setConfirmLogout(true)}
