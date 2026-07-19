@@ -1,5 +1,3 @@
-
-
 export type PedidoItem = {
   cantidad: number;
   concepto: string;
@@ -8,6 +6,7 @@ export type PedidoItem = {
 };
 
 export type PedidoTicket = {
+  folio: number;
   clienteNombre: string;
   clienteTelefono?: string;
   direccionEntrega?: {
@@ -62,13 +61,20 @@ function line(left: string, right: string, width = TICKET_WIDTH): string {
 
 function centerText(text: string, width = TICKET_WIDTH): string {
   const t = fitText(text, width);
-  if (t.length >= width) return t;
+
+  if (t.length >= width) {
+    return t;
+  }
+
   const leftPad = Math.floor((width - t.length) / 2);
+
   return " ".repeat(leftPad) + t;
 }
 
 function formatDateTime(value?: Date | string | null): string {
-  if (!value) return "-";
+  if (!value) {
+    return "-";
+  }
 
   if (value instanceof Date) {
     const dd = String(value.getDate()).padStart(2, "0");
@@ -76,10 +82,16 @@ function formatDateTime(value?: Date | string | null): string {
     const yyyy = value.getFullYear();
     const hh = String(value.getHours()).padStart(2, "0");
     const mi = String(value.getMinutes()).padStart(2, "0");
+
     return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
   }
 
   return fitText(String(value));
+}
+
+function formatFolio(folio: number): string {
+  const numero = String(Number(folio || 0)).padStart(6, "0");
+  return `OC-${numero}`;
 }
 
 function labelTipoPedido(tipo: string): string {
@@ -105,18 +117,26 @@ function labelMetodoPago(pago: string): string {
   return map[pago] || pago;
 }
 
-function buildClienteTelefonoLine(nombre?: string, telefono?: string): string {
+function buildClienteTelefonoLine(
+  nombre?: string,
+  telefono?: string
+): string {
   const n = normalizeText(nombre?.trim() || "Publico general");
   const t = normalizeText(telefono?.trim() || "");
 
-  if (!t) return fitText(n);
+  if (!t) {
+    return fitText(n);
+  }
 
   return line(n, t);
 }
 
 function wrapText(text: string, width = TICKET_WIDTH): string[] {
   const clean = normalizeText(text).trim();
-  if (!clean) return [];
+
+  if (!clean) {
+    return [];
+  }
 
   const words = clean.split(/\s+/);
   const lines: string[] = [];
@@ -128,14 +148,18 @@ function wrapText(text: string, width = TICKET_WIDTH): string[] {
     if (candidate.length <= width) {
       current = candidate;
     } else {
-      if (current) lines.push(current);
+      if (current) {
+        lines.push(current);
+      }
 
       if (word.length > width) {
         let rest = word;
+
         while (rest.length > width) {
           lines.push(rest.slice(0, width));
           rest = rest.slice(width);
         }
+
         current = rest;
       } else {
         current = word;
@@ -143,14 +167,19 @@ function wrapText(text: string, width = TICKET_WIDTH): string[] {
     }
   }
 
-  if (current) lines.push(current);
+  if (current) {
+    lines.push(current);
+  }
+
   return lines;
 }
 
 function buildDireccionLines(
   direccion?: PedidoTicket["direccionEntrega"]
 ): string[] {
-  if (!direccion?.calle) return [];
+  if (!direccion?.calle) {
+    return [];
+  }
 
   const rawLines = [
     [
@@ -160,21 +189,35 @@ function buildDireccionLines(
     ]
       .filter(Boolean)
       .join(" "),
-    [direccion.colonia, direccion.ciudad].filter(Boolean).join(", "),
-    [direccion.estado, direccion.cp ? `CP ${direccion.cp}` : ""]
+
+    [direccion.colonia, direccion.ciudad]
+      .filter(Boolean)
+      .join(", "),
+
+    [
+      direccion.estado,
+      direccion.cp ? `CP ${direccion.cp}` : "",
+    ]
       .filter(Boolean)
       .join(" "),
-    direccion.referencias ? `Ref: ${direccion.referencias}` : "",
+
+    direccion.referencias
+      ? `Ref: ${direccion.referencias}`
+      : "",
   ].filter(Boolean);
 
   return rawLines.flatMap((part) => wrapText(part));
 }
 
-export function buildTicketBlocks(order: PedidoTicket): string[] {
+export function buildTicketBlocks(
+  order: PedidoTicket
+): string[] {
   const blocks: string[] = [];
-  const direccionLines = buildDireccionLines(order.direccionEntrega);
+  const direccionLines = buildDireccionLines(
+    order.direccionEntrega
+  );
 
-  //1) Header
+  // 1) Header
   blocks.push(
     [
       "BARBACOA LOS GUEROS",
@@ -183,25 +226,40 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
     ].join("\n") + "\n"
   );
 
-
-  // 2) Cliente / fecha
+  // 2) Cliente y folio
   blocks.push(
     [
-      buildClienteTelefonoLine(order.clienteNombre, order.clienteTelefono),
+      buildClienteTelefonoLine(
+        order.clienteNombre,
+        order.clienteTelefono
+      ),
+      line("Folio", formatFolio(order.folio)),
+    ].join("\n") + "\n"
+  );
+
+  // 3) Fecha y separador
+  blocks.push(
+    [
       line("Fecha", formatDateTime(order.createdAt)),
       "--------------------------------",
     ].join("\n") + "\n"
   );
 
-  // 3) tipos
+  // 4) Tipos
   blocks.push(
     [
-      line("Pago", labelMetodoPago(order.metodoPago || "-")),
-      line("Tipo", labelTipoPedido(order.tipoPedido || "-")),
+      line(
+        "Pago",
+        labelMetodoPago(order.metodoPago || "-")
+      ),
+      line(
+        "Tipo",
+        labelTipoPedido(order.tipoPedido || "-")
+      ),
     ].join("\n") + "\n"
   );
 
-  // 4) direccion
+  // 5) Dirección
   if (direccionLines.length === 0) {
     blocks.push(
       [
@@ -210,7 +268,11 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
       ].join("\n") + "\n"
     );
   } else {
-    for (let i = 0; i < direccionLines.length; i += 2) {
+    for (
+      let i = 0;
+      i < direccionLines.length;
+      i += 2
+    ) {
       blocks.push(
         [
           direccionLines[i] ?? line("", ""),
@@ -220,7 +282,7 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
     }
   }
 
-  // 5) Encabezado productos
+  // 6) Encabezado productos
   blocks.push(
     [
       line("Producto", "Total"),
@@ -228,18 +290,27 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
     ].join("\n") + "\n"
   );
 
-  // 6+) Items en bloques de maximo 2 lineas
+  // 7) Items en bloques de máximo 2 líneas
   const itemLines = order.items.map(
-    (item) => line(`${item.cantidad} ${item.concepto}`, money(item.total)) + "\n"
+    (item) =>
+      line(
+        `${item.cantidad} ${item.concepto}`,
+        money(item.total)
+      ) + "\n"
   );
 
   for (let i = 0; i < itemLines.length; i += 2) {
-    blocks.push(itemLines.slice(i, i + 2).join(""));
+    blocks.push(
+      itemLines.slice(i, i + 2).join("")
+    );
   }
 
-  // Notas
+  // 8) Notas
   if (order.notas?.trim()) {
-    const notaLines = wrapText(order.notas.trim());
+    const notaLines = wrapText(
+      order.notas.trim()
+    );
+
     if (notaLines.length > 0) {
       blocks.push(
         [
@@ -249,7 +320,11 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
         ].join("\n") + "\n"
       );
 
-      for (let i = 1; i < notaLines.length; i += 2) {
+      for (
+        let i = 1;
+        i < notaLines.length;
+        i += 2
+      ) {
         blocks.push(
           [
             notaLines[i] ?? "",
@@ -260,7 +335,7 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
     }
   }
 
-  // Total
+  // 9) Total
   blocks.push(
     [
       "--------------------------------",
@@ -269,7 +344,7 @@ export function buildTicketBlocks(order: PedidoTicket): string[] {
     ].join("\n") + "\n"
   );
 
-  // Footer
+  // 10) Footer
   blocks.push(
     [
       "Gracias por su compra",
