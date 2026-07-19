@@ -11,6 +11,7 @@ import { db } from "@/lib/firebase";
 import { buildPrintJobDocument } from "@/lib/printer/printjobs";
 import { mapPedidoToTicket, type PedidoForPrint } from "@/lib/printer/order-print-mapper";
 import type { Producto } from "@/types";
+import { createOrderWithFolio } from "@/lib/orders/create-order-with-folio";
 
 interface DireccionCliente {
   calle: string;
@@ -437,14 +438,18 @@ export default function NuevoPedidoPage() {
         pedidoData.nombreClienteManual = nombreClienteManual.trim();
       }
 
-      const pedidoRef = await addDoc(collection(db, "pedidos"), pedidoData);
+        const { pedidoId, folio } = await createOrderWithFolio(
+          pedidoData
+        );
 
-      setSavedOrder(
-        mapPedidoToTicket({
-          pedidoId: pedidoRef.id,
-          pedidoData,
-        })
-      );
+        setSavedOrder(
+          mapPedidoToTicket({
+            pedidoId,
+            folio,
+            pedidoData,
+          })
+        );
+
     } catch (err) {
       console.error(err);
       alert("Error al guardar el pedido");

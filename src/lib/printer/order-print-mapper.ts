@@ -2,6 +2,7 @@ import type { PedidoTicket } from "./ticket";
 
 export type PedidoForPrint = PedidoTicket & {
   pedidoId: string;
+  folio: number;
 };
 
 type PedidoDataForPrint = {
@@ -18,13 +19,20 @@ type PedidoDataForPrint = {
 
 export function mapPedidoToTicket(params: {
   pedidoId: string;
+  folio: number;
   pedidoData: PedidoDataForPrint;
   createdAt?: Date;
 }): PedidoForPrint {
-  const { pedidoId, pedidoData, createdAt = new Date() } = params;
+  const {
+    pedidoId,
+    folio,
+    pedidoData,
+    createdAt = new Date(),
+  } = params;
 
   return {
     pedidoId,
+    folio,
     clienteNombre: pedidoData.clienteNombre ?? "",
     clienteTelefono: pedidoData.clienteTelefono ?? "",
     direccionEntrega: pedidoData.direccionEntrega,
